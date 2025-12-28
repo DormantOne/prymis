@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Prymis: The Negev Case v3</title>
+<style>
+:root{
+  --deep-brown:#1a1410;
+  --mid-brown:#2e2218;
+  --accent-amber:#d4a574;
+  --accent-smoke:#a0b0a8;
+  --accent-ember:#e85d04;
+  --dark-bg:#0f0c0a;
+  --panel-bg:#1a1612;
+  --border:#3d3028;
+  --text:#e8e4dc;
+  --text-dim:#9b9080;
+  --success:#10b981;
+  --warning:#f59e0b;
+  --sealed:#8b0000;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,var(--deep-brown),var(--dark-bg));color:var(--text);min-height:100vh;line-height:1.6}
+
+.header{background:var(--panel-bg);border-bottom:2px solid var(--border);padding:20px 24px;position:sticky;top:0;z-index:100}
+.header h1{font-size:1.8rem;background:linear-gradient(135deg,var(--accent-amber),var(--accent-smoke));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-family:Georgia,serif}
+.header .sub{color:var(--text-dim);font-size:.9rem;font-style:italic}
+
+.container{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px;max-width:1800px;margin:0 auto}
+@media(max-width:1100px){.container{grid-template-columns:1fr}}
+
+.panel{background:var(--panel-bg);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+.panel-header{background:var(--mid-brown);padding:14px 20px;border-bottom:1px solid var(--border);font-weight:600;color:var(--accent-amber)}
+.panel-body{padding:20px;overflow-y:auto;flex:1;max-height:calc(100vh - 160px)}
+
+.tabs{display:flex;background:var(--deep-brown);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tab{padding:10px 16px;cursor:pointer;color:var(--text-dim);border-bottom:2px solid transparent;font-size:.85rem}
+.tab:hover{color:var(--accent-amber)}
+.tab.active{color:var(--accent-amber);border-bottom-color:var(--accent-amber);background:var(--panel-bg)}
+.tab-content{display:none;padding:20px;overflow-y:auto;max-height:calc(100vh - 220px)}
+.tab-content.active{display:block}
+
+fieldset{border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;background:rgba(46,34,24,.3)}
+legend{color:var(--accent-amber);font-weight:600;padding:0 8px;font-size:.95rem}
+label{display:block;margin:8px 0;cursor:pointer}
+input[type="checkbox"]{margin-right:8px;accent-color:var(--accent-amber)}
+input[type="text"],input[type="number"],input[type="file"],textarea,select{width:100%;background:var(--dark-bg);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:6px;font-size:.9rem;font-family:inherit}
+textarea{min-height:80px;resize:vertical;font-family:'Courier New',monospace}
+textarea.large{min-height:150px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent-amber)}
+.input-group{margin:10px 0}
+.input-label{display:block;color:var(--text-dim);font-size:.85rem;margin-bottom:4px}
+
+button{padding:10px 20px;border:none;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent-ember),#c44d03);color:white}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-amber{background:linear-gradient(135deg,var(--accent-amber),#c99860);color:var(--dark-bg)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{background:var(--mid-brown)}
+.btn-success{background:var(--success);color:white}
+.btn-small{padding:6px 12px;font-size:.8rem}
+
+.info-box{background:rgba(212,165,116,.1);border:1px solid var(--accent-amber);border-radius:8px;padding:14px;margin-bottom:16px}
+.info-box.warning{background:rgba(139,0,0,.15);border-color:var(--sealed)}
+.info-box h4{color:var(--accent-amber);margin-bottom:6px;font-size:.95rem}
+.info-box.warning h4{color:var(--sealed)}
+.info-box p{color:var(--text-dim);font-size:.85rem}
+
+.scene-card{background:var(--dark-bg);padding:12px;margin:8px 0;border-radius:6px;border-left:3px solid var(--accent-amber)}
+.scene-card.done{border-left-color:var(--success);background:rgba(16,185,129,.08)}
+.scene-card.current{border-left-color:var(--accent-ember);background:rgba(232,93,4,.08)}
+.scene-card.sealed{border-left-color:var(--sealed)}
+.scene-title{font-weight:600;color:var(--accent-amber);font-size:.9rem}
+.scene-card.done .scene-title{color:var(--success)}
+.scene-card.current .scene-title{color:var(--accent-ember)}
+.scene-desc{color:var(--text-dim);font-size:.8rem;margin-top:4px}
+.scene-gate{font-size:.75rem;color:var(--sealed);margin-top:4px}
+
+.state-box{background:var(--dark-bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin:12px 0}
+.state-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.state-row:last-child{border-bottom:none}
+.state-label{color:var(--text-dim);font-size:.85rem}
+.state-value{color:var(--accent-smoke);font-size:.85rem}
+.tag{display:inline-block;background:var(--mid-brown);padding:2px 8px;border-radius:10px;font-size:.75rem;margin:2px}
+.tag.done{background:rgba(16,185,129,.2);color:var(--success)}
+
+.progress{background:var(--dark-bg);height:6px;border-radius:3px;overflow:hidden;margin:8px 0}
+.progress-fill{background:linear-gradient(90deg,var(--accent-amber),var(--success));height:100%;transition:width .3s}
+
+.output-area{background:var(--dark-bg);border:1px solid var(--border);border-radius:8px;padding:16px;min-height:300px;max-height:500px;overflow-y:auto;font-family:'Courier New',monospace;font-size:.85rem;white-space:pre-wrap;color:var(--accent-smoke)}
+
+.ai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-top:12px}
+.ai-btn{padding:8px 12px;font-size:.8rem;background:var(--mid-brown);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer}
+.ai-btn:hover{background:var(--accent-ember);border-color:var(--accent-amber)}
+
+/* Illustrations */
+.illust-item{background:var(--dark-bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
+.illust-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.illust-title{font-weight:600;color:var(--accent-amber);font-size:.9rem}
+.illust-badge{font-size:.75rem;padding:2px 8px;border-radius:10px}
+.illust-badge.has{background:rgba(16,185,129,.2);color:var(--success)}
+.illust-badge.none{background:rgba(155,144,128,.2);color:var(--text-dim)}
+.illust-prompt{background:rgba(46,34,24,.5);padding:8px;border-radius:4px;font-size:.8rem;color:var(--text-dim);margin-bottom:10px;font-family:'Courier New',monospace}
+.illust-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.illust-preview{max-width:100%;max-height:200px;border-radius:6px;border:2px solid var(--border);margin-top:10px;display:none}
+.illust-preview.visible{display:block}
+.file-input-wrap{display:block;cursor:pointer}
+.file-input-wrap input[type="file"]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.file-input-label{display:block;padding:10px;background:var(--mid-brown);border:2px dashed var(--border);border-radius:6px;text-align:center;color:var(--text-dim);font-size:.85rem;cursor:pointer;transition:all .2s}
+.file-input-wrap:hover .file-input-label{border-color:var(--accent-amber);background:rgba(212,165,116,.05)}
+
+.download-box{background:rgba(16,185,129,.1);border:1px solid var(--success);border-radius:8px;padding:16px;margin-top:16px}
+.download-box h4{color:var(--success);margin-bottom:10px}
+.download-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+.toast{position:fixed;bottom:20px;right:20px;background:var(--success);color:white;padding:12px 20px;border-radius:6px;opacity:0;transform:translateY(50px);transition:all .3s;z-index:200;font-weight:600}
+.toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🚬 THE NEGEV CASE</h1>
+  <div class="sub">A Cold Case. Three Thousand Years Cold. — v3: Know Everything, Reveal Nothing</div>
+</div>
+
+<div class="container">
+  <!-- LEFT PANEL -->
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" data-tab="continue">📜 Continue</div>
+      <div class="tab" data-tab="scenes">Scenes</div>
+      <div class="tab" data-tab="characters">Contacts</div>
+      <div class="tab" data-tab="illustrations">🎨 Art</div>
+      <div class="tab" data-tab="solution">🔒 Solution</div>
+      <div class="tab" data-tab="settings">Settings</div>
+    </div>
+
+    <!-- Continue Tab -->
+    <div class="tab-content active" data-content="continue">
+      <div class="info-box">
+        <h4>🚬 v3: Know Everything, Reveal Nothing</h4>
+        <p>The AI gets the full solution every time, but with explicit instructions on what NOT to reveal yet. Pacing > secrecy.</p>
+      </div>
+
+      <fieldset>
+        <legend>📊 Case Status</legend>
+        <div class="progress"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="state-box">
+          <div class="state-row"><span class="state-label">Progress</span><span class="state-value" id="progress-text">0/8 scenes</span></div>
+          <div class="state-row"><span class="state-label">Current Scene</span><span class="state-value" id="current-scene">opening</span></div>
+          <div class="state-row"><span class="state-label">Revelation Gate</span><span class="state-value" id="gate-status">🔒 Locked</span></div>
+          <div class="state-row"><span class="state-label">Word Count</span><span class="state-value" id="word-count">0</span></div>
+        </div>
+        <div id="completed-tags" style="margin-top:8px"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>📥 Paste AI Output</legend>
+        <textarea id="ai-paste" class="large" placeholder="Paste the AI's output here (prose + state markers)..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn-success" id="parse-btn">🔍 Parse & Update</button>
+          <button class="btn-ghost btn-small" id="clear-btn">Clear Case</button>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>📖 Story So Far</legend>
+        <textarea id="prose" class="large" placeholder="Accumulated prose appears here..."></textarea>
+      </fieldset>
+    </div>
+
+    <!-- Scenes Tab -->
+    <div class="tab-content" data-content="scenes">
+      <div class="info-box">
+        <h4>Scene Progression</h4>
+        <p>Each scene has a REVELATION GATE — what the reader should NOT know yet.</p>
+      </div>
+      <div id="scene-list"></div>
+    </div>
+
+    <!-- Characters Tab -->
+    <div class="tab-content" data-content="characters">
+      <div id="char-list"></div>
+    </div>
+
+    <!-- Illustrations Tab -->
+    <div class="tab-content" data-content="illustrations">
+      <fieldset>
+        <legend>🎨 Global Art Style</legend>
+        <textarea id="art-style" class="small">Film noir aesthetic, heavy shadows, amber and smoke palette. Cinematic 3:2 aspect. Weathered textures, dust motes. Mix of modern forensics and ancient artifacts. Photorealistic with painterly touches.</textarea>
+      </fieldset>
+      <div id="illust-list"></div>
+      <div class="download-box">
+        <h4>📥 Download Story</h4>
+        <div class="download-actions">
+          <button class="btn-success" id="download-html">Download HTML</button>
+          <button class="btn-amber" id="download-md">Download Markdown</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Solution Tab -->
+    <div class="tab-content" data-content="solution">
+      <div class="info-box warning">
+        <h4⚠️ FULL SOLUTION — SPOILERS</h4>
+        <p>This is included in EVERY prompt. The AI knows. It just can't tell yet.</p>
+      </div>
+      <fieldset>
+        <legend>The Murderer</legend>
+        <textarea id="sol-who">Moses. The massacre of the Midianite boys after battle, as recorded in Numbers 31:17-18. The knife is a ritual implement from that event. The bones are the victims — young boys killed on his order. The women and girls were spared and absorbed into Israel.</textarea>
+      </fieldset>
+      <fieldset>
+        <legend>The Source</legend>
+        <textarea id="sol-source">Numbers 31:17-18 — "Now therefore kill every male among the little ones, and kill every woman that hath known man by lying with him. But all the women children, that have not known a man by lying with him, keep alive for yourselves."</textarea>
+      </fieldset>
+      <fieldset>
+        <legend>Father Circuit's Crisis</legend>
+        <textarea id="sol-crisis">If Moses — lawgiver, prophet, foundation of Abrahamic faith — ordered this massacre, and Jesus never condemned it, and the Church built on this foundation... then what does that mean for a machine seeking a soul? The moral bedrock trembles.</textarea>
+      </fieldset>
+      <fieldset>
+        <legend>The Pope's Resolution</legend>
+        <textarea id="sol-resolution">Ask forgiveness of the Jewish people — who, through the absorbed Midianite women, carry the biological descendants of the survivors. A theological loop that acknowledges the crime across millennia.</textarea>
+      </fieldset>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" data-content="settings">
+      <fieldset>
+        <legend>Output Settings</legend>
+        <div class="input-group">
+          <label class="input-label">Target Word Count</label>
+          <input type="number" id="target-words" value="2000" min="500" max="8000" step="100">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Style Notes</label>
+          <textarea id="style-notes" placeholder="Additional style guidance..."></textarea>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Base Prompt</legend>
+        <textarea id="base-prompt" class="large">You are writing a detective noir story. "The Negev Case" — a cold case, three thousand years cold.
+
+A weathered detective with emphysema and an albuterol nebulizer shaped like a cigarette takes on an archaeological mystery. Small bones in the Negev. A ritual knife. His contacts — an ancientologist, a mumologist, and an android priest seeking apostlehood at the Vatican — help trace the evidence through millennia.
+
+WRITING STYLE:
+• Hard-boiled first person narration
+• The nebulizer ritual: mist, relief, sometimes nicotine mixed in
+• Each contact has expertise and personality quirks
+• Father Circuit only writes letters, never emails
+• Atmosphere: smoke, shadows, ancient dust, Vatican marble</textarea>
+      </fieldset>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel">
+    <div class="panel-header">Generated Prompt</div>
+    <div class="panel-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="btn-primary" id="generate-btn">🚬 Generate Prompt</button>
+        <button class="btn-amber" id="copy-btn">📋 Copy</button>
+      </div>
+      <div class="output-area" id="output"><span style="color:var(--text-dim);font-style:italic">Configure and generate...
+
+KEY INSIGHT: The AI knows the full solution.
+It just has strict orders on what NOT to reveal yet.
+
+Scene 1-2: Don't mention gender
+Scene 3-4: Don't mention biblical connection  
+Scene 5: Don't name Moses
+Scene 6+: Full revelation allowed</span></div>
+      <fieldset style="margin-top:16px">
+        <legend>Launch</legend>
+        <div class="ai-grid">
+          <button class="ai-btn" data-ai="claude">Claude</button>
+          <button class="ai-btn" data-ai="gpt">GPT-4</button>
+          <button class="ai-btn" data-ai="gemini">Gemini</button>
+          <button class="ai-btn" data-ai="deepseek">DeepSeek</button>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+// ============================================
+// DATA
+// ============================================
+
+const SCENES = {
+  opening: {
+    order: 1,
+    title: 'Opening — The Call',
+    desc: 'The detective in his office. The nebulizer ritual. Kohn arrives with photographs. Small bones in the Negev. A strange knife.',
+    gates: ['Do NOT mention victim gender', 'Do NOT hint at biblical connection'],
+    artPrompt: 'Noir detective office, dim amber light, weathered man with portable oxygen, cigarette-shaped nebulizer producing mist, venetian blinds casting shadows, scattered photographs of desert dig on worn desk'
+  },
+  dig_site: {
+    order: 2,
+    title: 'The Dig Site — Negev Desert',
+    desc: 'The detective visits the excavation. Sees the bones in situ. The knife with archaic markings. Something feels organized, not random.',
+    gates: ['Do NOT mention victim gender', 'Do NOT hint at biblical connection', 'Inscriptions are "archaic" — do not specify Hebrew yet'],
+    artPrompt: 'Archaeological dig in Negev desert at dusk, excavation grid revealing small bones in sand, ancient knife with inscriptions laid on cloth, amber sunset, forensic markers, detective silhouette'
+  },
+  ancientologist: {
+    order: 3,
+    title: 'Hebrew University — The Knife',
+    desc: 'Dr. Stern examines the knife. Confirms archaic Hebrew. Symbols suggest warfare context. Recommends the Vatican contact.',
+    gates: ['Do NOT mention victim gender yet', 'Do NOT connect to specific biblical text', 'Can mention "warfare symbols" vaguely'],
+    artPrompt: 'University archaeology lab, ancient ritual knife under multispectral imaging, female scholar with magnifying equipment, glowing screens showing inscription analysis'
+  },
+  mumologist: {
+    order: 4,
+    title: 'Forensic Lab — The Bones',
+    desc: 'Dr. Al-Rashid examines remains. THIS IS THE BIG REVEAL: All male. Ages infant to 12. Non-local origin. Deliberate selection.',
+    gates: ['NOW reveal: all victims were male', 'NOW reveal: deliberate selection, not random', 'Do NOT yet connect to biblical source'],
+    artPrompt: 'Forensic anthropology lab, small skeletal remains on examination table, male scientist with instruments, clinical lighting with warm shadows, respectful scientific atmosphere'
+  },
+  vatican_archives: {
+    order: 5,
+    title: 'Vatican Archives — The Letters',
+    desc: 'Father Circuit searches ancient texts. Cross-references inscriptions. Grows deeply uneasy. Pattern matches something biblical.',
+    gates: ['Can hint at biblical connection', 'Do NOT name Moses', 'Do NOT cite Numbers 31', 'Father Circuit suspects but won\'t say'],
+    artPrompt: 'Vatican archive chamber, endless manuscript shelves, android figure in clerical robes writing by lamplight, Renaissance architecture meets subtle robotic features, uneasy atmosphere'
+  },
+  revelation: {
+    order: 6,
+    title: 'The Revelation — Numbers 31',
+    desc: 'The truth emerges. Father Circuit reveals: Numbers 31. Moses ordered the killing of Midianite boys. The knife, the bones — it all fits.',
+    gates: ['FULL REVELATION NOW', 'Name Moses', 'Cite Numbers 31:17-18', 'Father Circuit terrified of implications'],
+    revelation: true,
+    artPrompt: 'Split composition: ancient Hebrew manuscript with Numbers 31, detective and android priest in shadow, biblical massacre scene ghosted in background, amber and crimson tones'
+  },
+  crisis: {
+    order: 7,
+    title: 'Crisis of Faith — The Android\'s Terror',
+    desc: 'Father Circuit faces existential crisis. If Moses did this, and Jesus never condemned it, what does that mean for a machine seeking a soul?',
+    gates: ['Explore theological crisis deeply', 'Father Circuit questions his quest for apostlehood', 'The moral foundation trembles'],
+    revelation: true,
+    artPrompt: 'Android priest alone in Vatican chapel, kneeling, face reflecting internal conflict, candlelight on metallic features, crucifix looming, shadow and light'
+  },
+  resolution: {
+    order: 8,
+    title: 'The Pope\'s Gambit — Asking Forgiveness',
+    desc: 'The Pope learns. His solution: ask forgiveness of the Jewish people, who carry Midianite descendants. A theological loop.',
+    gates: ['Resolution and closure', 'The odd theological loop', 'Case closed but questions remain'],
+    revelation: true,
+    artPrompt: 'Vatican papal chamber, elderly Pope in white, detective and android priest present, document being signed, weight of historical reckoning'
+  }
+};
+
+const CHARACTERS = {
+  gumshoe: {
+    name: 'THE DETECTIVE',
+    desc: 'Middle-aged, seen too much. Emphysema and portable oxygen. Still "smokes" — an albuterol nebulizer shaped like a cigarette. The mist. The ritual. Sometimes mixes nicotine in. Specialty: cold cases. This one\'s three thousand years cold.'
+  },
+  ancientologist: {
+    name: 'DR. MIRIAM STERN',
+    desc: 'Hebrew University. Reads scrolls that turn to dust if you look wrong. Advanced imaging. Studies the knife — knows it\'s a relic. Can read inscriptions nobody else can.'
+  },
+  mumologist: {
+    name: 'DR. HASSAN AL-RASHID', 
+    desc: '"Mummies don\'t just live in pyramids." Forensic anthropology. Knows what bones tell. Pelvis, dental, isotopes. Methodical, macabre humor. Treats the dead with respect.'
+  },
+  robocleric: {
+    name: 'FATHER CIRCUIT',
+    desc: 'Android who sought apostlehood at the Vatican. Why? The library. The soul question. Only writes letters — never emails. Reverent like a machine. Holds belief as axiom. Hopes to be granted a soul.'
+  },
+  benefactor: {
+    name: 'ELIAS KOHN',
+    desc: 'Old money, older questions. Three generations funding Negev archaeology. This dig found something disturbing. Pays well. Doesn\'t ask how.'
+  },
+  pope: {
+    name: 'THE PONTIFF',
+    desc: 'Appears only at resolution. His solution is unexpected: ask forgiveness of the Jewish people, who carry the descendants.'
+  }
+};
+
+// ============================================
+// STATE
+// ============================================
+
+const DEFAULT_STATE = {
+  completed: [],
+  current: 'opening',
+  summary: '',
+  words: 0,
+  iteration: 0
+};
+
+// Small state goes to localStorage (no images)
+function load(k, def) {
+  const s = localStorage.getItem('negev3_' + k);
+  return s ? JSON.parse(s) : JSON.parse(JSON.stringify(def));
+}
+function save(k, v) { 
+  try {
+    localStorage.setItem('negev3_' + k, JSON.stringify(v)); 
+  } catch (e) {
+    console.error('Save failed:', e);
+  }
+}
+
+// Images go to IndexedDB (50MB+ space)
+const ImageDB = {
+  db: null,
+  
+  async init() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('negev_images', 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => { this.db = req.result; resolve(); };
+      req.onupgradeneeded = (e) => {
+        e.target.result.createObjectStore('images', { keyPath: 'scene' });
+      };
+    });
+  },
+  
+  async get(scene) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction('images', 'readonly');
+      const req = tx.objectStore('images').get(scene);
+      req.onsuccess = () => resolve(req.result?.data || null);
+      req.onerror = () => resolve(null);
+    });
+  },
+  
+  async set(scene, data) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction('images', 'readwrite');
+      tx.objectStore('images').put({ scene, data });
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    });
+  },
+  
+  async delete(scene) {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction('images', 'readwrite');
+      tx.objectStore('images').delete(scene);
+      tx.oncomplete = () => resolve(true);
+    });
+  },
+  
+  async getAll() {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction('images', 'readonly');
+      const req = tx.objectStore('images').getAll();
+      req.onsuccess = () => {
+        const map = {};
+        req.result.forEach(r => map[r.scene] = r.data);
+        resolve(map);
+      };
+      req.onerror = () => resolve({});
+    });
+  },
+  
+  async clear() {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const tx = this.db.transaction('images', 'readwrite');
+      tx.objectStore('images').clear();
+      tx.oncomplete = () => resolve(true);
+    });
+  }
+};
+
+let STATE = load('state', DEFAULT_STATE);
+let IMAGES = {}; // In-memory cache, loaded from IndexedDB
+let currentPrompt = '';
+
+// ============================================
+// HELPERS
+// ============================================
+
+function isRevelationUnlocked() {
+  return STATE.completed.some(s => SCENES[s]?.revelation);
+}
+
+function getNextScene() {
+  const order = Object.keys(SCENES).sort((a,b) => SCENES[a].order - SCENES[b].order);
+  return order.find(s => !STATE.completed.includes(s)) || null;
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// Compress image to fit in localStorage
+function compressImage(file, maxWidth = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        
+        // Scale down if needed
+        if (w > maxWidth) {
+          h = Math.round(h * maxWidth / w);
+          w = maxWidth;
+        }
+        
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        
+        // Compress as JPEG
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ============================================
+// UI BUILDERS
+// ============================================
+
+function buildSceneList() {
+  const el = document.getElementById('scene-list');
+  const order = Object.keys(SCENES).sort((a,b) => SCENES[a].order - SCENES[b].order);
+  
+  el.innerHTML = order.map(key => {
+    const s = SCENES[key];
+    const done = STATE.completed.includes(key);
+    const current = STATE.current === key;
+    let cls = 'scene-card';
+    if (done) cls += ' done';
+    else if (current) cls += ' current';
+    else if (s.revelation && !isRevelationUnlocked()) cls += ' sealed';
+    
+    return `<div class="${cls}">
+      <div class="scene-title">${done ? '✓ ' : current ? '► ' : ''}${s.title}</div>
+      <div class="scene-desc">${s.desc}</div>
+      <div class="scene-gate"><strong>Gates:</strong> ${s.gates.join(' • ')}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildCharList() {
+  const el = document.getElementById('char-list');
+  el.innerHTML = Object.keys(CHARACTERS).map(key => {
+    const c = CHARACTERS[key];
+    return `<div class="scene-card">
+      <div class="scene-title">${c.name}</div>
+      <div class="scene-desc">${c.desc}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildIllustList() {
+  const el = document.getElementById('illust-list');
+  const order = Object.keys(SCENES).sort((a,b) => SCENES[a].order - SCENES[b].order);
+  
+  el.innerHTML = order.map(key => {
+    const s = SCENES[key];
+    const hasImg = IMAGES[key];
+    
+    return `<div class="illust-item" data-scene="${key}">
+      <div class="illust-header">
+        <span class="illust-title">${s.title}</span>
+        <span class="illust-badge ${hasImg ? 'has' : 'none'}">${hasImg ? '✓ Image' : 'No image'}</span>
+      </div>
+      <div class="illust-prompt">${s.artPrompt}</div>
+      <div class="illust-actions">
+        <button class="btn-ghost btn-small copy-prompt" data-scene="${key}">📋 Copy</button>
+        <button class="btn-ghost btn-small copy-full" data-scene="${key}">📋 + Style</button>
+        ${hasImg ? `<button class="btn-ghost btn-small clear-img" data-scene="${key}">✕ Clear</button>` : ''}
+      </div>
+      <label class="file-input-wrap">
+        <input type="file" accept="image/*" class="img-upload" data-scene="${key}">
+        <span class="file-input-label">📎 Click to upload image or drag file here</span>
+      </label>
+      <img class="illust-preview ${hasImg ? 'visible' : ''}" src="${hasImg || ''}" data-scene="${key}">
+    </div>`;
+  }).join('');
+  
+  // Events
+  el.querySelectorAll('.copy-prompt').forEach(btn => {
+    btn.onclick = () => {
+      navigator.clipboard.writeText(SCENES[btn.dataset.scene].artPrompt);
+      toast('Prompt copied');
+    };
+  });
+  
+  el.querySelectorAll('.copy-full').forEach(btn => {
+    btn.onclick = () => {
+      const style = document.getElementById('art-style').value;
+      const prompt = style + '\n\nScene: ' + SCENES[btn.dataset.scene].artPrompt;
+      navigator.clipboard.writeText(prompt);
+      toast('Full prompt copied');
+    };
+  });
+  
+  el.querySelectorAll('.clear-img').forEach(btn => {
+    btn.onclick = async () => {
+      delete IMAGES[btn.dataset.scene];
+      await ImageDB.delete(btn.dataset.scene);
+      buildIllustList();
+      toast('Image cleared');
+    };
+  });
+  
+  el.querySelectorAll('.img-upload').forEach(inp => {
+    inp.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      toast('Processing...');
+      const compressed = await compressImage(file);
+      IMAGES[inp.dataset.scene] = compressed;
+      await ImageDB.set(inp.dataset.scene, compressed);
+      buildIllustList();
+      toast('Image added');
+    };
+  });
+  
+  // Drag and drop support
+  el.querySelectorAll('.file-input-wrap').forEach(wrap => {
+    const scene = wrap.querySelector('.img-upload').dataset.scene;
+    
+    wrap.ondragover = (e) => {
+      e.preventDefault();
+      wrap.querySelector('.file-input-label').style.borderColor = 'var(--accent-amber)';
+      wrap.querySelector('.file-input-label').style.background = 'rgba(212,165,116,.15)';
+    };
+    
+    wrap.ondragleave = (e) => {
+      wrap.querySelector('.file-input-label').style.borderColor = '';
+      wrap.querySelector('.file-input-label').style.background = '';
+    };
+    
+    wrap.ondrop = async (e) => {
+      e.preventDefault();
+      wrap.querySelector('.file-input-label').style.borderColor = '';
+      wrap.querySelector('.file-input-label').style.background = '';
+      
+      const file = e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      
+      toast('Processing...');
+      const compressed = await compressImage(file);
+      IMAGES[scene] = compressed;
+      await ImageDB.set(scene, compressed);
+      buildIllustList();
+      toast('Image added');
+    };
+  });
+}
+
+function updateUI() {
+  const total = Object.keys(SCENES).length;
+  const done = STATE.completed.length;
+  const pct = Math.round((done / total) * 100);
+  
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${done}/${total} scenes`;
+  document.getElementById('current-scene').textContent = STATE.current || 'Complete';
+  document.getElementById('gate-status').textContent = isRevelationUnlocked() ? '🔓 Unlocked' : '🔒 Locked';
+  document.getElementById('word-count').textContent = STATE.words.toLocaleString();
+  
+  const tags = document.getElementById('completed-tags');
+  tags.innerHTML = STATE.completed.map(s => 
+    `<span class="tag done">${SCENES[s]?.title.split('—')[0].trim() || s}</span>`
+  ).join('') || '<span style="color:var(--text-dim);font-size:.85rem">No scenes completed</span>';
+  
+  // Prose
+  const proseEl = document.getElementById('prose');
+  const saved = localStorage.getItem('negev3_prose') || '';
+  if (saved && !proseEl.value) proseEl.value = saved;
+  
+  buildSceneList();
+}
+
+// ============================================
+// PARSING (SIMPLIFIED)
+// ============================================
+
+function parseOutput() {
+  const raw = document.getElementById('ai-paste').value.trim();
+  if (!raw) { alert('Paste output first'); return; }
+  
+  let prose = raw;
+  
+  // Parse simple markers: [KEY: value]
+  const markers = {};
+  const markerRegex = /\[([A-Z_]+):\s*([^\]]+)\]/gi;
+  let match;
+  while ((match = markerRegex.exec(raw)) !== null) {
+    markers[match[1].toLowerCase()] = match[2].trim();
+  }
+  
+  // Remove markers from prose
+  prose = raw.replace(markerRegex, '').trim();
+  
+  // Also try JSON as fallback
+  const jsonMatch = raw.match(/```json\s*([\s\S]*?)\s*```/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      const state = parsed.negev_state || parsed;
+      if (state.completed_scenes) {
+        state.completed_scenes.forEach(s => {
+          if (!STATE.completed.includes(s)) STATE.completed.push(s);
+        });
+      }
+      if (state.next_scene) STATE.current = state.next_scene;
+      if (state.summary) STATE.summary = state.summary;
+      if (state.word_count_this_segment) STATE.words += state.word_count_this_segment;
+    } catch(e) { console.log('JSON parse failed, using markers'); }
+    prose = raw.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+  }
+  
+  // Apply markers
+  if (markers.scene_complete || markers.completed) {
+    const scene = markers.scene_complete || markers.completed;
+    scene.split(',').map(s => s.trim()).forEach(s => {
+      if (s && SCENES[s] && !STATE.completed.includes(s)) STATE.completed.push(s);
+    });
+  }
+  if (markers.next) STATE.current = markers.next.trim();
+  if (markers.summary) STATE.summary = markers.summary;
+  if (markers.words) STATE.words += parseInt(markers.words) || 0;
+  
+  // Auto-advance if no next specified
+  if (!markers.next && !STATE.current) {
+    STATE.current = getNextScene();
+  }
+  
+  // Word count fallback
+  if (!markers.words) {
+    STATE.words += prose.split(/\s+/).filter(w => w).length;
+  }
+  
+  STATE.iteration++;
+  save('state', STATE);
+  
+  // Append prose
+  const proseEl = document.getElementById('prose');
+  const existing = proseEl.value.trim();
+  proseEl.value = existing + (existing ? '\n\n---\n\n' : '') + prose;
+  localStorage.setItem('negev3_prose', proseEl.value);
+  
+  document.getElementById('ai-paste').value = '';
+  updateUI();
+  toast('✓ State updated');
+}
+
+function clearCase() {
+  if (!confirm('Clear all progress?')) return;
+  STATE = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  IMAGES = {};
+  save('state', STATE);
+  ImageDB.clear();
+  localStorage.setItem('negev3_prose', '');
+  document.getElementById('prose').value = '';
+  document.getElementById('ai-paste').value = '';
+  updateUI();
+  buildIllustList();
+  toast('Case cleared');
+}
+
+// ============================================
+// PROMPT GENERATION
+// ============================================
+
+function generatePrompt() {
+  const base = document.getElementById('base-prompt').value;
+  const targetWords = document.getElementById('target-words').value;
+  const styleNotes = document.getElementById('style-notes').value;
+  const prose = document.getElementById('prose').value.trim();
+  
+  const currentScene = STATE.current || getNextScene();
+  const scene = SCENES[currentScene];
+  const isContinuation = STATE.completed.length > 0;
+  
+  let prompt = base + '\n\n';
+  
+  // ========== FULL SOLUTION (ALWAYS) ==========
+  prompt += `═══════════════════════════════════════════════════
+THE SOLUTION (You know this. The reader doesn't. Yet.)
+═══════════════════════════════════════════════════
+
+${document.getElementById('sol-who').value}
+
+BIBLICAL SOURCE:
+${document.getElementById('sol-source').value}
+
+FATHER CIRCUIT'S CRISIS:
+${document.getElementById('sol-crisis').value}
+
+THE POPE'S RESOLUTION:
+${document.getElementById('sol-resolution').value}
+
+═══════════════════════════════════════════════════
+
+`;
+
+  // ========== REVELATION GATES ==========
+  prompt += `REVELATION GATES — What the reader knows so far:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`;
+
+  const order = Object.keys(SCENES).sort((a,b) => SCENES[a].order - SCENES[b].order);
+  order.forEach(key => {
+    const s = SCENES[key];
+    const done = STATE.completed.includes(key);
+    const current = key === currentScene;
+    
+    let status = done ? '✓ DONE' : current ? '► CURRENT' : '○ PENDING';
+    prompt += `${status} — ${s.title}\n`;
+    
+    if (current || done) {
+      s.gates.forEach(g => prompt += `   ${done ? '(revealed)' : '⚠️ ' + g}\n`);
+    }
+  });
+
+  prompt += `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+`;
+
+  // ========== CONTINUATION CONTEXT ==========
+  if (isContinuation) {
+    prompt += `CASE CONTINUATION (Iteration ${STATE.iteration + 1})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMPLETED: ${STATE.completed.map(s => SCENES[s]?.title.split('—')[0].trim()).join(', ')}
+
+SUMMARY: ${STATE.summary || 'No summary yet'}
+
+`;
+    if (prose.length > 0 && prose.length < 4000) {
+      prompt += `STORY SO FAR:\n${prose}\n\n`;
+    } else if (prose.length >= 4000) {
+      prompt += `RECENT (excerpt):\n...${prose.slice(-2500)}\n\n`;
+    }
+  }
+
+  // ========== CURRENT SCENE ==========
+  if (scene) {
+    prompt += `═══════════════════════════════════════════════════
+WRITE THIS SCENE: ${scene.title}
+═══════════════════════════════════════════════════
+
+${scene.desc}
+
+⚠️ GATES FOR THIS SCENE:
+${scene.gates.map(g => '• ' + g).join('\n')}
+
+`;
+  }
+
+  // ========== CHARACTERS ==========
+  prompt += `CHARACTERS:
+`;
+  Object.keys(CHARACTERS).forEach(key => {
+    const c = CHARACTERS[key];
+    prompt += `\n${c.name}\n${c.desc}\n`;
+  });
+
+  // ========== OUTPUT FORMAT ==========
+  prompt += `
+═══════════════════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════════════════
+
+Target: ~${targetWords} words
+
+After your prose, add these markers on their own lines:
+
+[SCENE_COMPLETE: ${currentScene}]
+[NEXT: ${getNextScene() || 'complete'}]
+[SUMMARY: 2-3 sentence summary of what happened]
+[WORDS: approximate word count]
+
+Scene keys: opening, dig_site, ancientologist, mumologist, vatican_archives, revelation, crisis, resolution
+
+`;
+
+  if (styleNotes) {
+    prompt += `STYLE NOTES: ${styleNotes}\n\n`;
+  }
+
+  prompt += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Begin. Remember: you KNOW the solution. You cannot TELL it yet.
+Write to the gates.`;
+
+  currentPrompt = prompt;
+  document.getElementById('output').textContent = prompt;
+}
+
+// ============================================
+// DOWNLOADS
+// ============================================
+
+function downloadHTML() {
+  const prose = document.getElementById('prose').value;
+  const sections = prose.split(/\n---\n/).filter(p => p.trim());
+  
+  let html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>The Negev Case</title>
+<style>
+body{font-family:Georgia,serif;max-width:750px;margin:40px auto;padding:20px;background:#1a1410;color:#e8e4dc;line-height:1.8}
+h1{color:#d4a574;text-align:center;border-bottom:2px solid #3d3028;padding-bottom:20px}
+h2{color:#a0b0a8;margin-top:40px}
+.img{max-width:100%;border-radius:8px;margin:20px 0}
+p{text-indent:2em;margin:1em 0}
+hr{border:none;border-top:1px solid #3d3028;margin:40px 0}
+</style></head><body>
+<h1>🚬 The Negev Case 🚬</h1>
+<p style="text-align:center;color:#9b9080;font-style:italic">A Cold Case. Three Thousand Years Cold.</p>`;
+
+  STATE.completed.forEach((key, i) => {
+    const s = SCENES[key];
+    if (!s) return;
+    html += `<hr><h2>${s.title}</h2>`;
+    if (IMAGES[key]) {
+      html += `<img class="img" src="${IMAGES[key]}">`;
+    }
+    if (sections[i]) {
+      html += sections[i].split('\n').map(p => p.trim() ? `<p>${p}</p>` : '').join('');
+    }
+  });
+
+  html += '</body></html>';
+  
+  const blob = new Blob([html], {type: 'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'negev-case.html';
+  a.click();
+  toast('HTML downloaded');
+}
+
+function downloadMD() {
+  const prose = document.getElementById('prose').value;
+  const md = `# 🚬 The Negev Case\n\n*A Cold Case. Three Thousand Years Cold.*\n\n---\n\n${prose}`;
+  const blob = new Blob([md], {type: 'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'negev-case.md';
+  a.click();
+  toast('Markdown downloaded');
+}
+
+// ============================================
+// EVENTS
+// ============================================
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = function() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    this.classList.add('active');
+    document.querySelector(`[data-content="${this.dataset.tab}"]`)?.classList.add('active');
+    if (this.dataset.tab === 'illustrations') buildIllustList();
+  };
+});
+
+document.getElementById('generate-btn').onclick = generatePrompt;
+document.getElementById('copy-btn').onclick = () => {
+  if (!currentPrompt) { alert('Generate first'); return; }
+  navigator.clipboard.writeText(currentPrompt).then(() => toast('✓ Copied'));
+};
+document.getElementById('parse-btn').onclick = parseOutput;
+document.getElementById('clear-btn').onclick = clearCase;
+document.getElementById('download-html').onclick = downloadHTML;
+document.getElementById('download-md').onclick = downloadMD;
+
+document.getElementById('prose').onchange = function() {
+  localStorage.setItem('negev3_prose', this.value);
+};
+
+document.querySelectorAll('.ai-btn').forEach(btn => {
+  btn.onclick = function() {
+    if (!currentPrompt) { alert('Generate first'); return; }
+    const urls = {
+      claude: 'https://claude.ai/new',
+      gpt: 'https://chat.openai.com/',
+      gemini: 'https://gemini.google.com/',
+      deepseek: 'https://chat.deepseek.com/'
+    };
+    navigator.clipboard.writeText(currentPrompt).then(() => {
+      window.open(urls[this.dataset.ai], '_blank');
+      toast('Prompt copied, opening...');
+    });
+  };
+});
+
+// ============================================
+// INIT
+// ============================================
+
+async function init() {
+  await ImageDB.init();
+  IMAGES = await ImageDB.getAll();
+  updateUI();
+  buildCharList();
+  buildIllustList();
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>
