@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>IM Topic Runner</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#151923; --text:#e9eef7; --dim:#9aa6b2;
+    --line:#273043; --ok:#10b981; --bad:#ef4444; --accent:#66d9ef;
+  }
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  .wrap{max-width:980px;margin:18px auto;padding:0 14px;}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:10px;}
+  h1{font-size:1.05rem;margin:0;}
+  .sub{color:var(--dim);font-size:.86rem;}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;}
+  .row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .big{font-size:1.15rem;font-weight:900;}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--dim);font-size:.82rem;}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+  button{
+    border:1px solid var(--line);background:#0c0f16;color:var(--text);
+    padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:900;
+  }
+  button:hover{border-color:var(--accent);}
+  .ok{border-color:rgba(16,185,129,.6);}
+  .bad{border-color:rgba(239,68,68,.6);}
+  .ghost{color:var(--dim);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:780px){.grid{grid-template-columns:1fr;}}
+  textarea{
+    width:100%; min-height:78px; resize:vertical;
+    border:1px solid var(--line); background:#0c0f16; color:var(--text);
+    border-radius:10px; padding:10px; font-size:.86rem;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+    white-space:pre-wrap;
+  }
+  .tiny{color:var(--dim);font-size:.8rem;margin-top:6px;}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;}
+  .statrow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(39,48,67,.6);}
+  .statrow:last-child{border-bottom:none;}
+  .k{color:var(--dim);font-size:.86rem;}
+  .v{font-weight:900;font-size:.9rem;}
+  ul{margin:0;padding:0;list-style:none;}
+  li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(39,48,67,.35);align-items:center;}
+  li:last-child{border-bottom:none;}
+  .miniBtn{
+    padding:6px 10px;border-radius:10px;font-weight:900;
+    border:1px solid var(--line);background:#0c0f16;color:var(--dim);cursor:pointer;
+  }
+  .miniBtn:hover{border-color:var(--accent);color:var(--text);}
+  .markOk{color:var(--ok);font-weight:900;}
+  .markBad{color:var(--bad);font-weight:900;}
+
+  /* modal */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.55);
+    display:none; align-items:center; justify-content:center; z-index:9999;
+  }
+  .modal{
+    width:min(560px, calc(100vw - 28px));
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:14px;
+  }
+  .modal h2{margin:0 0 6px 0; font-size:1rem;}
+  .modal p{margin:0; color:var(--dim); font-size:.92rem; line-height:1.35;}
+  .modal .btns{justify-content:flex-end; margin-top:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div>
+      <h1>Internal Medicine — Topic Runner</h1>
+      <div class="sub">One click copies the prompt, opens OpenEvidence, and reminds you to paste. Then mark Correct/Incorrect.</div>
+    </div>
+    <div class="sub mono" id="nowTop"></div>
+  </div>
+
+  <!-- PROMPT / CURRENT TOPIC -->
+  <div class="panel">
+    <div class="row">
+      <div>
+        <div class="pill" id="currentWhen">When: —</div>
+        <div class="big" id="currentTopic" style="margin-top:8px;">—</div>
+      </div>
+      <div style="text-align:right">
+        <div class="pill" id="overallPill">0 answered • 0%</div>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button id="btnCopyOpen">📋 Copy prompt + OpenEvidence</button>
+      <button class="ok" id="btnCorrect">✅ Correct</button>
+      <button class="bad" id="btnIncorrect">❌ Incorrect</button>
+      <button class="ghost" id="btnNext">↻ New topic</button>
+      <button class="ghost" id="btnReset">♻️ Reset</button>
+    </div>
+
+    <div class="tiny">Prompt (auto-generated):</div>
+    <textarea id="prompt" spellcheck="false" readonly></textarea>
+  </div>
+
+  <!-- HISTORY (TOP) -->
+  <div class="panel">
+    <div class="row">
+      <div class="big" style="font-size:1rem;">History (most recent on top)</div>
+      <div class="pill" id="historyCount">0 entries</div>
+    </div>
+    <ul id="history"></ul>
+  </div>
+
+  <!-- STATS BELOW -->
+  <div class="grid">
+    <div class="panel">
+      <div class="big" style="font-size:1rem;">Totals</div>
+      <div class="statrow"><span class="k">Total answered</span><span class="v" id="sumN">0</span></div>
+      <div class="statrow"><span class="k">Correct</span><span class="v" id="sumC">0</span></div>
+      <div class="statrow"><span class="k">Accuracy</span><span class="v" id="sumPct">0%</span></div>
+      <div class="statrow"><span class="k">Unseen categories</span><span class="v" id="unseenN">—</span></div>
+      <div class="tiny">Stored locally in your browser (refresh-safe).</div>
+    </div>
+
+    <div class="panel">
+      <div class="big" style="font-size:1rem;">Relative % per category (coverage)</div>
+      <div class="tiny">Top 10 by attempts: share of your questions + accuracy.</div>
+      <ul id="coverage"></ul>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="big" style="font-size:1rem;">Strengths / Weaknesses</div>
+    <div class="tiny">Top 5 / Bottom 5 by accuracy (only categories with ≥2 attempts).</div>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+      <div>
+        <div class="pill">Strengths</div>
+        <ul id="strengths"></ul>
+      </div>
+      <div>
+        <div class="pill">Weaknesses</div>
+        <ul id="weaknesses"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- reminder modal -->
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2>Copied ✓</h2>
+    <p>OpenEvidence should be open in a new tab. Paste the prompt now (Ctrl/Cmd+V).</p>
+    <div class="btns">
+      <button id="btnModalOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // If your OpenEvidence URL differs (or your org uses a special link), change this.
+  const OPEN_EVIDENCE_URL = "https://www.openevidence.com/";
+
+  // 30 IM categories (broad areas) incl. Potluck
+  const TOPICS = [
+    "Cardiology",
+    "Pulmonary",
+    "Critical Care",
+    "Infectious Diseases",
+    "Nephrology",
+    "Electrolytes / Acid–Base",
+    "Gastroenterology",
+    "Hepatology",
+    "Endocrinology",
+    "Rheumatology",
+    "Hematology",
+    "Oncology",
+    "Neurology",
+    "Dermatology",
+    "Psychiatry",
+    "Geriatrics",
+    "Preventive Medicine",
+    "Hospital Medicine / Perioperative",
+    "Allergy / Immunology",
+    "Palliative Care",
+    "Nutrition / Obesity",
+    "Sleep Medicine",
+    "Women’s Health (IM)",
+    "Men’s Health / Urology (IM)",
+    "Musculoskeletal / Sports Med",
+    "Toxicology / Poisoning",
+    "Pharmacology / Adverse Drug Effects",
+    "Radiology / Diagnostics (IM)",
+    "Biostatistics / Study Design",
+    "Potluck (anything)"
+  ];
+
+  // "Occasional potluck" frequency when picking next topic
+  const POTLUCK_RATE = 0.10; // 10%
+
+  const KEY = "im_topic_runner_v3";
+
+  const $ = (id) => document.getElementById(id);
+
+  function pad2(x){ return String(x).padStart(2,"0"); }
+  function nowStamp(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = pad2(d.getMonth()+1);
+    const da = pad2(d.getDate());
+    const hh = pad2(d.getHours());
+    const mm = pad2(d.getMinutes());
+    return `${y}-${m}-${da} ${hh}:${mm}`;
+  }
+  function todayTop(){
+    const d = new Date();
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if(!raw) return { current:null, history:[] };
+      const s = JSON.parse(raw);
+      s.history = Array.isArray(s.history) ? s.history : [];
+      return s;
+    }catch{
+      return { current:null, history:[] };
+    }
+  }
+  function saveState(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
+
+  function pickTopic(){
+    const wantPotluck = Math.random() < POTLUCK_RATE;
+    if (wantPotluck) return "Potluck (anything)";
+    const pool = TOPICS.filter(t => t !== "Potluck (anything)");
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function ensureCurrent(s){
+    if(!s.current){
+      s.current = { when: nowStamp(), topic: pickTopic() };
+      saveState(s);
+    }
+    return s.current;
+  }
+
+  function buildPrompt(topic){
+    return `Please give me a board-style Internal Medicine MCQ A-E in ${topic}. Don't give the answer. After I answer with a single letter please tell me the correct answer and why.`;
+  }
+
+  function recomputeByArea(history){
+    const by = {};
+    for(const h of history){
+      const area = h.topic;
+      if(!by[area]) by[area] = { n:0, c:0 };
+      by[area].n += 1;
+      if(h.correct) by[area].c += 1;
+    }
+    return by;
+  }
+
+  function fmtPct(n,d){
+    if(!d) return "0%";
+    return Math.round((n/d)*100) + "%";
+  }
+
+  function totalStats(history){
+    const n = history.length;
+    const c = history.reduce((acc,h)=>acc+(h.correct?1:0),0);
+    return { n, c, pct: fmtPct(c,n) };
+  }
+
+  function recordAnswer(isCorrect){
+    const s = loadState();
+    const cur = ensureCurrent(s);
+
+    s.history.unshift({
+      id: String(Date.now()) + "_" + Math.floor(Math.random()*1e9),
+      when: nowStamp(),
+      topic: cur.topic,
+      correct: !!isCorrect
+    });
+
+    // pick next
+    s.current = { when: nowStamp(), topic: pickTopic() };
+
+    saveState(s);
+    render();
+  }
+
+  function nextTopic(){
+    const s = loadState();
+    s.current = { when: nowStamp(), topic: pickTopic() };
+    saveState(s);
+    render();
+  }
+
+  function deleteEntry(id){
+    const s = loadState();
+    s.history = s.history.filter(h => h.id !== id);
+    saveState(s);
+    render();
+  }
+
+  function resetAll(){
+    if(!confirm("Reset all scores and history?")) return;
+    localStorage.removeItem(KEY);
+    render();
+  }
+
+  function showModal(){ $("modalBackdrop").style.display = "flex"; }
+  function hideModal(){ $("modalBackdrop").style.display = "none"; }
+
+  async function copyAndOpen(){
+    const s = loadState();
+    const cur = ensureCurrent(s);
+    const prompt = buildPrompt(cur.topic);
+    $("prompt").value = prompt;
+
+    try { await navigator.clipboard.writeText(prompt); }
+    catch(e){ /* clipboard may be blocked on some file:// setups */ }
+
+    window.open(OPEN_EVIDENCE_URL, "_blank", "noopener,noreferrer");
+    showModal();
+  }
+
+  function renderHistory(history){
+    const el = $("history");
+    $("historyCount").textContent = `${history.length} entries`;
+    const max = 16;
+    const items = history.slice(0, max);
+
+    if(items.length === 0){
+      el.innerHTML = `<li><span class="k">No history yet</span><span class="v">—</span></li>`;
+      return;
+    }
+
+    el.innerHTML = items.map(h => {
+      const mark = h.correct ? `<span class="markOk">Correct</span>` : `<span class="markBad">Incorrect</span>`;
+      return `
+        <li>
+          <span class="k">${h.when} • ${h.topic}</span>
+          <span style="display:flex;gap:8px;align-items:center;">
+            ${mark}
+            <button class="miniBtn" data-del="${h.id}" title="Delete this entry">Delete</button>
+          </span>
+        </li>
+      `;
+    }).join("");
+
+    el.querySelectorAll("[data-del]").forEach(btn => {
+      btn.onclick = () => deleteEntry(btn.getAttribute("data-del"));
+    });
+  }
+
+  function renderCoverage(history, byArea){
+    const el = $("coverage");
+    const tot = history.length;
+    if(!tot){
+      el.innerHTML = `<li><span class="k">—</span><span class="v">No data yet</span></li>`;
+      return;
+    }
+
+    const rows = Object.keys(byArea).map(area => {
+      const a = byArea[area];
+      const share = a.n / tot;
+      const acc = a.n ? (a.c / a.n) : 0;
+      return { area, n:a.n, share, acc };
+    }).sort((a,b) => b.n - a.n).slice(0,10);
+
+    el.innerHTML = rows.map(r => {
+      const sharePct = Math.round(r.share*100) + "%";
+      const accPct = Math.round(r.acc*100) + "%";
+      return `<li><span class="k">${r.area}</span><span class="v">${sharePct} <span class="k">(acc ${accPct}, n=${r.n})</span></span></li>`;
+    }).join("");
+  }
+
+  function renderStrengthWeak(byArea){
+    const strengths = $("strengths");
+    const weaknesses = $("weaknesses");
+    strengths.innerHTML = "";
+    weaknesses.innerHTML = "";
+
+    const rows = Object.keys(byArea).map(area => {
+      const a = byArea[area];
+      const n = a.n||0, c = a.c||0;
+      const pct = n ? (c/n) : 0;
+      return { area, n, c, pct };
+    }).filter(r => r.n >= 2);
+
+    if(rows.length === 0){
+      strengths.innerHTML = `<li><span class="k">—</span><span class="v">Need ≥2 attempts</span></li>`;
+      weaknesses.innerHTML = `<li><span class="k">—</span><span class="v">Need ≥2 attempts</span></li>`;
+      return;
+    }
+
+    const top = [...rows].sort((a,b) => (b.pct-a.pct) || (b.n-a.n)).slice(0,5);
+    const bot = [...rows].sort((a,b) => (a.pct-b.pct) || (b.n-a.n)).slice(0,5);
+
+    strengths.innerHTML = top.map(r =>
+      `<li><span class="k">${r.area}</span><span class="v">${Math.round(r.pct*100)}% <span class="k">(n=${r.n})</span></span></li>`
+    ).join("");
+
+    weaknesses.innerHTML = bot.map(r =>
+      `<li><span class="k">${r.area}</span><span class="v">${Math.round(r.pct*100)}% <span class="k">(n=${r.n})</span></span></li>`
+    ).join("");
+  }
+
+  function render(){
+    $("nowTop").textContent = todayTop();
+
+    const s = loadState();
+    const cur = ensureCurrent(s);
+
+    $("currentWhen").textContent = `When: ${cur.when}`;
+    $("currentTopic").textContent = cur.topic;
+    $("prompt").value = buildPrompt(cur.topic);
+
+    const byArea = recomputeByArea(s.history);
+    const tot = totalStats(s.history);
+
+    $("sumN").textContent = tot.n;
+    $("sumC").textContent = tot.c;
+    $("sumPct").textContent = tot.pct;
+    $("overallPill").textContent = `${tot.n} answered • ${tot.pct}`;
+
+    // unseen categories = topics with 0 attempts (including potluck)
+    let unseen = 0;
+    for(const t of TOPICS){
+      if(!byArea[t] || (byArea[t].n||0) === 0) unseen += 1;
+    }
+    $("unseenN").textContent = unseen;
+
+    renderHistory(s.history);
+    renderCoverage(s.history, byArea);
+    renderStrengthWeak(byArea);
+  }
+
+  // events
+  $("btnCopyOpen").onclick = copyAndOpen;
+  $("btnCorrect").onclick = () => recordAnswer(true);
+  $("btnIncorrect").onclick = () => recordAnswer(false);
+  $("btnNext").onclick = nextTopic;
+  $("btnReset").onclick = resetAll;
+
+  $("btnModalOk").onclick = hideModal;
+  $("modalBackdrop").onclick = (e) => { if(e.target === $("modalBackdrop")) hideModal(); };
+
+  render();
+})();
+</script>
+</body>
+</html>
