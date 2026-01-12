@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>IM Topic Runner</title>
+<title>IM Topic Runner (Simple)</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#151923; --text:#e9eef7; --dim:#9aa6b2;
@@ -15,10 +15,10 @@
   h1{font-size:1.05rem;margin:0;}
   .sub{color:var(--dim);font-size:.86rem;}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;}
-  .row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-end;}
   .big{font-size:1.15rem;font-weight:900;}
   .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--dim);font-size:.82rem;}
-  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center;}
   button{
     border:1px solid var(--line);background:#0c0f16;color:var(--text);
     padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:900;
@@ -28,9 +28,9 @@
   .bad{border-color:rgba(239,68,68,.6);}
   .ghost{color:var(--dim);}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-  @media(max-width:780px){.grid{grid-template-columns:1fr;}}
+  @media(max-width:820px){.grid{grid-template-columns:1fr;}}
   textarea{
-    width:100%; min-height:78px; resize:vertical;
+    width:100%; min-height:76px; resize:vertical;
     border:1px solid var(--line); background:#0c0f16; color:var(--text);
     border-radius:10px; padding:10px; font-size:.86rem;
     font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
@@ -48,10 +48,24 @@
   .miniBtn{
     padding:6px 10px;border-radius:10px;font-weight:900;
     border:1px solid var(--line);background:#0c0f16;color:var(--dim);cursor:pointer;
+    white-space:nowrap;
   }
   .miniBtn:hover{border-color:var(--accent);color:var(--text);}
   .markOk{color:var(--ok);font-weight:900;}
   .markBad{color:var(--bad);font-weight:900;}
+
+  .toggle{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+    padding:6px 8px; border:1px solid var(--line); border-radius:999px;
+    background:#0c0f16;
+  }
+  .toggle label{display:flex;gap:6px;align-items:center;color:var(--dim);font-size:.86rem;cursor:pointer;}
+  .toggle input{accent-color:var(--accent);}
+
+  details{border:1px solid rgba(39,48,67,.6);border-radius:12px;padding:10px;background:rgba(12,15,22,.4);}
+  details > summary{cursor:pointer;color:var(--dim);font-weight:900;}
+  details[open] > summary{color:var(--text);}
+  .note{color:var(--dim);font-size:.82rem;margin-top:6px;}
 
   /* modal */
   .modal-backdrop{
@@ -66,43 +80,60 @@
   .modal h2{margin:0 0 6px 0; font-size:1rem;}
   .modal p{margin:0; color:var(--dim); font-size:.92rem; line-height:1.35;}
   .modal .btns{justify-content:flex-end; margin-top:12px;}
+
+  .cat-sub-split .cat{color:var(--accent); font-size:0.85em; display:block; margin-bottom:2px;}
+  .cat-sub-split .sub{color:var(--text);}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="hdr">
     <div>
-      <h1>Internal Medicine — Topic Runner</h1>
-      <div class="sub">One click copies the prompt, opens OpenEvidence, and reminds you to paste. Then mark Correct/Incorrect.</div>
+      <h1>Internal Medicine — Topic Runner (Simple)</h1>
+      <div class="sub">Copy prompt → OpenEvidence → paste → answer there → mark Correct/Incorrect here.</div>
     </div>
     <div class="sub mono" id="nowTop"></div>
   </div>
 
-  <!-- PROMPT / CURRENT TOPIC -->
+  <!-- CURRENT / MODE / PROMPT / SCORE BUTTONS BELOW PROMPT -->
   <div class="panel">
     <div class="row">
       <div>
         <div class="pill" id="currentWhen">When: —</div>
         <div class="big" id="currentTopic" style="margin-top:8px;">—</div>
+        <div class="tiny" id="modeBadge">Mode: —</div>
       </div>
-      <div style="text-align:right">
+
+      <div style="text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
         <div class="pill" id="overallPill">0 answered • 0%</div>
+
+        <div class="toggle" title="Toggle question source">
+          <label><input type="radio" name="mode" value="general"> General</label>
+          <label><input type="radio" name="mode" value="grand_rounds"> Grand Rounds</label>
+        </div>
       </div>
     </div>
 
     <div class="btns">
       <button id="btnCopyOpen">📋 Copy prompt + OpenEvidence</button>
-      <button class="ok" id="btnCorrect">✅ Correct</button>
-      <button class="bad" id="btnIncorrect">❌ Incorrect</button>
       <button class="ghost" id="btnNext">↻ New topic</button>
       <button class="ghost" id="btnReset">♻️ Reset</button>
     </div>
 
-    <div class="tiny">Prompt (auto-generated):</div>
-    <textarea id="prompt" spellcheck="false" readonly></textarea>
+    <div class="tiny">Prompt (editable — tweak if you want):</div>
+    <textarea id="prompt" spellcheck="false"></textarea>
+
+    <!-- NATURAL FLOW: CORRECT/INCORRECT DIRECTLY UNDER PROMPT -->
+    <div class="tiny" id="answeredLine" style="margin-top:10px;">
+      The question on <span class="mono" id="answeredTopic">—</span> you just answered was:
+    </div>
+    <div class="btns" style="margin-top:8px;">
+      <button class="ok" id="btnCorrect">✅ Correct</button>
+      <button class="bad" id="btnIncorrect">❌ Incorrect</button>
+    </div>
   </div>
 
-  <!-- HISTORY (TOP) -->
+  <!-- HISTORY -->
   <div class="panel">
     <div class="row">
       <div class="big" style="font-size:1rem;">History (most recent on top)</div>
@@ -111,19 +142,18 @@
     <ul id="history"></ul>
   </div>
 
-  <!-- STATS BELOW -->
+  <!-- STATS -->
   <div class="grid">
     <div class="panel">
       <div class="big" style="font-size:1rem;">Totals</div>
       <div class="statrow"><span class="k">Total answered</span><span class="v" id="sumN">0</span></div>
       <div class="statrow"><span class="k">Correct</span><span class="v" id="sumC">0</span></div>
       <div class="statrow"><span class="k">Accuracy</span><span class="v" id="sumPct">0%</span></div>
-      <div class="statrow"><span class="k">Unseen categories</span><span class="v" id="unseenN">—</span></div>
       <div class="tiny">Stored locally in your browser (refresh-safe).</div>
     </div>
 
     <div class="panel">
-      <div class="big" style="font-size:1rem;">Relative % per category (coverage)</div>
+      <div class="big" style="font-size:1rem;">Relative % per category</div>
       <div class="tiny">Top 10 by attempts: share of your questions + accuracy.</div>
       <ul id="coverage"></ul>
     </div>
@@ -143,6 +173,19 @@
       </div>
     </div>
   </div>
+
+  <!-- GRAND ROUNDS TOPICS -->
+  <div class="panel">
+    <details>
+      <summary>Grand Rounds topics (edit)</summary>
+      <div class="note">One per line. Used when mode = Grand Rounds.</div>
+      <textarea id="grTopics" spellcheck="false"></textarea>
+      <div class="btns">
+        <button class="ghost" id="btnSaveGR">Save Grand Rounds topics</button>
+      </div>
+      <div class="note">Defaults: HTN management • Lifestyle medicine • Testicular cancer • Migraine management • Prostate cancer</div>
+    </details>
+  </div>
 </div>
 
 <!-- reminder modal -->
@@ -158,59 +201,443 @@
 
 <script>
 (() => {
-  // If your OpenEvidence URL differs (or your org uses a special link), change this.
   const OPEN_EVIDENCE_URL = "https://www.openevidence.com/";
 
-  // 30 IM categories (broad areas) incl. Potluck
-  const TOPICS = [
-    "Cardiology",
-    "Pulmonary",
-    "Critical Care",
-    "Infectious Diseases",
-    "Nephrology",
-    "Electrolytes / Acid–Base",
-    "Gastroenterology",
-    "Hepatology",
-    "Endocrinology",
-    "Rheumatology",
-    "Hematology",
-    "Oncology",
-    "Neurology",
-    "Dermatology",
-    "Psychiatry",
-    "Geriatrics",
-    "Preventive Medicine",
-    "Hospital Medicine / Perioperative",
-    "Allergy / Immunology",
-    "Palliative Care",
-    "Nutrition / Obesity",
-    "Sleep Medicine",
-    "Women’s Health (IM)",
-    "Men’s Health / Urology (IM)",
-    "Musculoskeletal / Sports Med",
-    "Toxicology / Poisoning",
-    "Pharmacology / Adverse Drug Effects",
-    "Radiology / Diagnostics (IM)",
-    "Biostatistics / Study Design",
-    "Potluck (anything)"
-  ];
 
-  // "Occasional potluck" frequency when picking next topic
-  const POTLUCK_RATE = 0.10; // 10%
 
-  const KEY = "im_topic_runner_v3";
+  const GENERAL_TOPICS = [
+  // CARDIOLOGY (10)
+  "Cardiology - Acute coronary syndrome: initial approach",
+  "Cardiology - ST-elevation MI: urgent pathway overview",
+  "Cardiology - Heart failure (reduced EF): core management framework",
+  "Cardiology - Heart failure (preserved EF): practical approach",
+  "Cardiology - Atrial fibrillation: rhythm vs rate + stroke prevention concepts",
+  "Cardiology - Supraventricular tachycardia: acute and long-term approach",
+  "Cardiology - Ventricular arrhythmia: stabilization priorities",
+  "Cardiology - Aortic catastrophe: recognition and first steps",
+  "Cardiology - Valvular disease: evaluation and timing of referral",
+  "Cardiology - Pericardial syndromes: diagnosis and treatment basics",
 
+  // PULMONARY (10)
+  "Pulmonary - COPD flare: evaluation and treatment approach",
+  "Pulmonary - Asthma flare: stepwise acute management",
+  "Pulmonary - Suspected PE: diagnostic strategy and disposition",
+  "Pulmonary - Pleural effusion: interpretation and next steps",
+  "Pulmonary - Pneumothorax: management by clinical context",
+  "Pulmonary - Pneumonia in adults: antibiotic selection principles",
+  "Pulmonary - Chronic dyspnea: structured workup",
+  "Pulmonary - Hemoptysis: triage and initial evaluation",
+  "Pulmonary - Pulmonary hypertension: workup overview",
+  "Pulmonary - Bronchiectasis: evaluation and maintenance strategy",
+
+  // CRITICAL CARE (10)
+  "Critical Care - Sepsis: early recognition and initial management",
+  "Critical Care - Shock: classification and bedside differentiation",
+  "Critical Care - Respiratory failure: escalation decisions",
+  "Critical Care - ARDS-like physiology: ventilator principles",
+  "Critical Care - Severe hyperglycemic crisis: ICU sequencing essentials",
+  "Critical Care - Prolonged seizure: stepwise medication approach",
+  "Critical Care - Major GI bleed: stabilization priorities",
+  "Critical Care - Massive hemorrhage: transfusion strategy concepts",
+  "Critical Care - ICU delirium: prevention and management",
+  "Critical Care - Sedation/analgesia: safe titration principles",
+
+  // INFECTIOUS DISEASES (10)
+  "Infectious Diseases - Bacteremia: evaluation and follow-up strategy",
+  "Infectious Diseases - Suspected endocarditis: diagnostic + empiric approach",
+  "Infectious Diseases - Suspected meningitis: empiric therapy framework",
+  "Infectious Diseases - Skin/soft tissue infection: treatment pathways",
+  "Infectious Diseases - Bone/joint infection: diagnostic approach",
+  "Infectious Diseases - Antibiotic-associated diarrhea: evaluation and treatment",
+  "Infectious Diseases - HIV care: prevention of opportunistic infections (conceptual)",
+  "Infectious Diseases - TB evaluation: initial testing + isolation decisions",
+  "Infectious Diseases - Hospital pneumonia: empiric coverage principles",
+  "Infectious Diseases - Complicated UTI: evaluation and treatment strategy",
+
+  // NEPHROLOGY (10)
+  "Nephrology - AKI: structured evaluation and early management",
+  "Nephrology - CKD: slowing progression (core levers)",
+  "Nephrology - Proteinuria syndromes: evaluation and complications",
+  "Nephrology - Inflammatory renal syndromes: recognizing urgency",
+  "Nephrology - Hematuria: glomerular vs urologic approach",
+  "Nephrology - Muscle breakdown kidney injury: prevention and management",
+  "Nephrology - Cystic kidney disease: screening and monitoring basics",
+  "Nephrology - Renovascular disease: when to suspect and what to do",
+  "Nephrology - Kidney replacement therapy: classic triggers (conceptual)",
+  "Nephrology - Post-transplant issues: early complications overview",
+
+  // ELECTROLYTES / ACID-BASE (10)
+  "Electrolytes/Acid-Base - Low sodium: diagnostic approach and safe correction",
+  "Electrolytes/Acid-Base - High sodium: replacement strategy and rate concepts",
+  "Electrolytes/Acid-Base - High potassium: immediate stabilization approach",
+  "Electrolytes/Acid-Base - Low potassium: causes and replacement principles",
+  "Electrolytes/Acid-Base - Low magnesium: causes and clinical impact",
+  "Electrolytes/Acid-Base - Low calcium: evaluation and acute treatment",
+  "Electrolytes/Acid-Base - High calcium: differential and initial management",
+  "Electrolytes/Acid-Base - Metabolic acidosis: differential framework",
+  "Electrolytes/Acid-Base - Metabolic alkalosis: common causes and approach",
+  "Electrolytes/Acid-Base - Mixed disorders: systematic interpretation",
+
+  // GASTROENTEROLOGY (10)
+  "Gastroenterology - Upper GI bleeding: evaluation and management basics",
+  "Gastroenterology - Lower GI bleeding: initial approach and disposition",
+  "Gastroenterology - Acute pancreatitis: core management decisions",
+  "Gastroenterology - Biliary syndromes: pattern recognition and first steps",
+  "Gastroenterology - IBD flare: workup and initial treatment choices",
+  "Gastroenterology - Functional bowel symptoms: diagnosis and red flags",
+  "Gastroenterology - Gluten-related disease: testing pathway",
+  "Gastroenterology - Reflux symptoms: evaluation and treatment plan",
+  "Gastroenterology - Chronic dyspepsia: test/treat strategy",
+  "Gastroenterology - Diverticular disease: outpatient vs inpatient approach",
+
+  // HEPATOLOGY (10)
+  "Hepatology - Cirrhosis: common complications and outpatient plan",
+  "Hepatology - Portal bleeding syndromes: acute management principles",
+  "Hepatology - Encephalopathy: triggers and treatment approach",
+  "Hepatology - Acute liver injury/failure: key evaluation steps",
+  "Hepatology - Viral hepatitis serologies: interpretation approach",
+  "Hepatology - Chronic hepatitis management: screening and monitoring concepts",
+  "Hepatology - Fatty liver disease: diagnosis and treatment priorities",
+  "Hepatology - Liver cancer surveillance: who and how often (conceptual)",
+  "Hepatology - Iron overload syndromes: evaluation and treatment basics",
+  "Hepatology - Cholestatic autoimmune liver disease: diagnosis and therapy",
+
+  // ENDOCRINOLOGY (10)
+  "Endocrinology - Type 2 diabetes: initial therapy strategy",
+  "Endocrinology - Type 2 diabetes: escalation approach (including injectables)",
+  "Endocrinology - Hyperglycemic crisis: recognition and management basics",
+  "Endocrinology - Hypothyroid symptoms: evaluation and replacement approach",
+  "Endocrinology - Hyperthyroid symptoms: evaluation and treatment options",
+  "Endocrinology - Thyroid emergency: stabilization priorities",
+  "Endocrinology - Adrenal insufficiency: diagnosis and stress dosing concepts",
+  "Endocrinology - Hypercortisol state: screening strategy",
+  "Endocrinology - Parathyroid disorders: evaluation and management overview",
+  "Endocrinology - Bone density loss: medication selection framework",
+
+  // RHEUMATOLOGY (10)
+  "Rheumatology - Crystal arthritis: acute management and prevention concepts",
+  "Rheumatology - Calcium crystal arthritis: diagnosis and treatment basics",
+  "Rheumatology - Inflammatory polyarthritis: initial workup and first-line therapy",
+  "Rheumatology - Systemic lupus-like illness: evaluation and risk features",
+  "Rheumatology - Small-vessel vasculitis pattern: recognition and first tests",
+  "Rheumatology - Large-vessel arteritis: urgent recognition and treatment",
+  "Rheumatology - Proximal pain/stiffness syndrome: diagnosis and steroids approach",
+  "Rheumatology - Scleroderma spectrum: key complications to screen for",
+  "Rheumatology - Inflammatory back pain: evaluation and management overview",
+  "Rheumatology - Hot swollen joint: decision points in evaluation",
+
+  // HEMATOLOGY (10)
+  "Hematology - Microcytic anemia: structured differential and workup",
+  "Hematology - Macrocytic anemia: evaluation strategy",
+  "Hematology - Hemolysis: key labs and differential framework",
+  "Hematology - Low platelets: broad approach to dangerous causes",
+  "Hematology - Prothrombotic drug reaction: recognition and next steps",
+  "Hematology - VTE: duration decisions (conceptual)",
+  "Hematology - Anticoagulant reversal: approach by agent (conceptual)",
+  "Hematology - Transfusion: thresholds and special situations (conceptual)",
+  "Hematology - Leukocytosis: distinguishing reactive vs malignant patterns",
+  "Hematology - Monoclonal protein: when to worry and next tests",
+
+  // ONCOLOGY (10)
+  "Oncology - Febrile immunosuppressed patient: initial management approach",
+  "Oncology - Rapid cell breakdown syndrome: prevention and treatment basics",
+  "Oncology - Malignancy-related clotting: anticoagulation strategy concepts",
+  "Oncology - Malignancy-related high calcium: acute management approach",
+  "Oncology - Mediastinal compression syndromes: urgent evaluation and steps",
+  "Oncology - Spinal cord compromise: red flags and immediate actions",
+  "Oncology - Paraneoplastic presentations: pattern recognition overview",
+  "Oncology - Incidental mass/nodule: risk-based follow-up principles",
+  "Oncology - Cancer screening: evidence-based eligibility concepts",
+  "Oncology - Fatigue/anemia in cancer: evaluation and supportive care basics",
+
+  // NEUROLOGY (10)
+  "Neurology - Acute stroke syndrome: time-sensitive workflow concepts",
+  "Neurology - TIA-like syndrome: workup and secondary prevention approach",
+  "Neurology - Intracranial bleeding: initial stabilization principles",
+  "Neurology - First seizure: evaluation strategy and counseling",
+  "Neurology - Headache: red flags and safe imaging decisions",
+  "Neurology - Migraine: acute vs preventive strategy (conceptual)",
+  "Neurology - Neuromuscular weakness syndrome: diagnostic approach",
+  "Neurology - Parkinsonism: management basics and complications",
+  "Neurology - Peripheral neuropathy: structured evaluation",
+  "Neurology - Cognitive decline: approach to common etiologies",
+
+  // DERMATOLOGY (10)
+  "Dermatology - Drug-related rash: severity recognition and next steps",
+  "Dermatology - Severe blistering eruption: urgent recognition and management",
+  "Dermatology - Psoriasis: systemic associations and treatment ladder",
+  "Dermatology - Eczema spectrum: escalation approach",
+  "Dermatology - Red leg: cellulitis vs mimics approach",
+  "Dermatology - Pigmented lesion: evaluation and biopsy principles",
+  "Dermatology - Non-melanoma skin cancer: risk features and management",
+  "Dermatology - Hives/swelling: acute approach and differential",
+  "Dermatology - Purpura/petechiae: evaluation triggers",
+  "Dermatology - Pressure injury: prevention and staging basics",
+
+  // PSYCHIATRY (10)
+  "Psychiatry - Depressive syndrome: diagnosis and first-line treatment",
+  "Psychiatry - Bipolar spectrum: recognition pitfalls and management basics",
+  "Psychiatry - Delirium: inpatient evaluation and management",
+  "Psychiatry - Alcohol withdrawal: assessment and medication approach",
+  "Psychiatry - Opioid use disorder: treatment initiation concepts",
+  "Psychiatry - Panic/anxiety syndromes: acute and long-term strategy",
+  "Psychiatry - Medication toxicity syndrome: recognition and treatment",
+  "Psychiatry - Antipsychotic adverse effects: monitoring approach",
+  "Psychiatry - Suicide risk: key assessment and safety planning",
+  "Psychiatry - Sleep complaints: behavioral-first strategy concepts",
+
+  // GERIATRICS (10)
+  "Geriatrics - Falls: evaluation and prevention priorities",
+  "Geriatrics - Polypharmacy: deprescribing framework",
+  "Geriatrics - Dementia: behavioral symptom approach",
+  "Geriatrics - Delirium prevention: hospital interventions",
+  "Geriatrics - Frailty: recognition and implications",
+  "Geriatrics - Bone health: prevention and treatment approach",
+  "Geriatrics - Incontinence: evaluation and first steps",
+  "Geriatrics - Orthostasis: evaluation and management",
+  "Geriatrics - Nutrition: sarcopenia prevention approach",
+  "Geriatrics - Advance care planning: documentation and communication basics",
+
+  // PREVENTIVE MEDICINE (10)
+  "Preventive Medicine - Adult vaccines: practical catch-up approach",
+  "Preventive Medicine - Lipid prevention: deciding when to treat (conceptual)",
+  "Preventive Medicine - BP screening: confirming diagnosis and monitoring",
+  "Preventive Medicine - Diabetes screening: who/when approach",
+  "Preventive Medicine - Colon cancer screening: choosing a strategy",
+  "Preventive Medicine - Cervical screening: interpreting results (conceptual)",
+  "Preventive Medicine - Breast screening: risk-based approach",
+  "Preventive Medicine - Lung screening: eligibility concepts",
+  "Preventive Medicine - AAA screening: who benefits and why",
+  "Preventive Medicine - Bone density screening: who/when approach",
+
+  // HOSPITAL MEDICINE / PERIOPERATIVE (10)
+  "Hospital/Perioperative - VTE prophylaxis: choosing an approach",
+  "Hospital/Perioperative - Anticoagulation around procedures: planning concepts",
+  "Hospital/Perioperative - Cardiac meds peri-op: continuation vs holding approach",
+  "Hospital/Perioperative - Post-op fever: timing-based differential overview",
+  "Hospital/Perioperative - Inpatient glucose: safe regimen principles",
+  "Hospital/Perioperative - Syncope: admission vs discharge thinking",
+  "Hospital/Perioperative - Inpatient chest pain: safe evaluation strategy",
+  "Hospital/Perioperative - Delirium on wards: workup and management basics",
+  "Hospital/Perioperative - Discharge safety: high-risk meds and counseling concepts",
+  "Hospital/Perioperative - Transfusion reaction: recognition and immediate steps",
+
+  // ALLERGY / IMMUNOLOGY (10)
+  "Allergy/Immunology - Anaphylaxis: immediate management and observation",
+  "Allergy/Immunology - Allergic rhinitis: stepwise control approach",
+  "Allergy/Immunology - Asthma control: stepping therapy up/down (conceptual)",
+  "Allergy/Immunology - Chronic hives: evaluation and escalation approach",
+  "Allergy/Immunology - Angioedema: major categories and initial approach",
+  "Allergy/Immunology - Antibiotic allergy labels: evaluation and de-labeling concepts",
+  "Allergy/Immunology - Immunodeficiency clues in adults: when to evaluate",
+  "Allergy/Immunology - Eosinophilia: differential framework",
+  "Allergy/Immunology - Vaccine reactions: evaluation basics",
+  "Allergy/Immunology - Severe drug reaction syndrome: recognition and management",
+
+  // PALLIATIVE CARE (10)
+  "Palliative Care - Pain: opioid initiation and titration concepts",
+  "Palliative Care - Opioid rotation: practical conversion principles",
+  "Palliative Care - Dyspnea: symptom-focused management approach",
+  "Palliative Care - Nausea: mechanism-based treatment approach",
+  "Palliative Care - Constipation: prevention and treatment with opioids",
+  "Palliative Care - Delirium near end of life: approach to management",
+  "Palliative Care - Goals of care: structuring serious-illness conversations",
+  "Palliative Care - Hospice transitions: recognizing eligibility signals",
+  "Palliative Care - Anxiety in serious illness: rapid relief strategies",
+  "Palliative Care - Refractory symptoms: ethical management concepts",
+
+  // NUTRITION / OBESITY (10)
+  "Nutrition/Obesity - Obesity meds: candidate selection and expectations",
+  "Nutrition/Obesity - Bariatric surgery: indications and pre-op considerations",
+  "Nutrition/Obesity - Refeeding risk: prevention strategy",
+  "Nutrition/Obesity - Malnutrition: identification and treatment plan",
+  "Nutrition/Obesity - Enteral vs parenteral support: choosing wisely",
+  "Nutrition/Obesity - Micronutrient deficiency patterns: evaluation approach",
+  "Nutrition/Obesity - Fatty liver counseling: practical dietary approach",
+  "Nutrition/Obesity - Muscle loss: prevention and rehabilitation basics",
+  "Nutrition/Obesity - High triglycerides: management approach",
+  "Nutrition/Obesity - Dietary patterns: evidence-informed counseling",
+
+  // SLEEP MEDICINE (10)
+  "Sleep Medicine - Sleep-disordered breathing: evaluation and treatment basics",
+  "Sleep Medicine - Insomnia: behavioral-first strategy and meds caveats",
+  "Sleep Medicine - Restless legs: evaluation and initial treatment",
+  "Sleep Medicine - Hypersomnia syndromes: differential approach",
+  "Sleep Medicine - Circadian problems: practical management strategies",
+  "Sleep Medicine - REM behavior symptoms: recognition and workup",
+  "Sleep Medicine - Central breathing problems at night: evaluation overview",
+  "Sleep Medicine - Excessive daytime sleepiness: medication vs disease approach",
+  "Sleep Medicine - Parasomnias: safety counseling and evaluation",
+  "Sleep Medicine - Sedative-hypnotics: risk mitigation and deprescribing",
+
+  // WOMEN'S HEALTH (IM) (10)
+  "Women’s Health (IM) - Contraception: tailoring to comorbidities (conceptual)",
+  "Women’s Health (IM) - Abnormal bleeding: initial evaluation approach",
+  "Women’s Health (IM) - PCOS: diagnostic approach and metabolic care",
+  "Women’s Health (IM) - Menopause symptoms: treatment options overview",
+  "Women’s Health (IM) - Bone health: screening and treatment concepts",
+  "Women’s Health (IM) - Hypertension in pregnancy: management principles",
+  "Women’s Health (IM) - Hyperglycemia in pregnancy: screening and follow-up basics",
+  "Women’s Health (IM) - Cervical screening: practical intervals and triage",
+  "Women’s Health (IM) - Breast complaint: initial evaluation strategy",
+  "Women’s Health (IM) - Recurrent urinary symptoms: prevention approach",
+
+  // MEN'S HEALTH / UROLOGY (IM) (10)
+  "Men’s Health/Urology (IM) - LUTS/BPH: evaluation and therapy overview",
+  "Men’s Health/Urology (IM) - Urinary retention: first steps and follow-up",
+  "Men’s Health/Urology (IM) - Hematuria: risk-based evaluation concepts",
+  "Men’s Health/Urology (IM) - Prostate inflammation syndromes: approach",
+  "Men’s Health/Urology (IM) - Erectile dysfunction: evaluation and treatment plan",
+  "Men’s Health/Urology (IM) - PSA discussions: shared decision-making framework",
+  "Men’s Health/Urology (IM) - Testicular concern: urgent evaluation strategy",
+  "Men’s Health/Urology (IM) - Suspected stone: management and follow-up concepts",
+  "Men’s Health/Urology (IM) - Epididymal pain: evaluation and empiric approach",
+  "Men’s Health/Urology (IM) - Low testosterone: diagnosis and counseling basics",
+
+  // MSK / SPORTS MED (10)
+  "MSK/Sports Med - Low back pain: conservative care vs escalation decisions",
+  "MSK/Sports Med - Radicular symptoms: initial management strategy",
+  "MSK/Sports Med - Shoulder pain: exam-driven differential approach",
+  "MSK/Sports Med - Knee pain/arthritis: stepwise management",
+  "MSK/Sports Med - Acute monoarthritis: evaluation strategy",
+  "MSK/Sports Med - Concussion: return-to-activity principles",
+  "MSK/Sports Med - Tendon pain syndromes: management overview",
+  "MSK/Sports Med - Fragility fracture: secondary prevention approach",
+  "MSK/Sports Med - Hand numbness: evaluation and initial treatment",
+  "MSK/Sports Med - Leg pain/swelling: key differential considerations",
+
+  // TOXICOLOGY / POISONING (10)
+  "Toxicology - Common analgesic overdose: initial approach",
+  "Toxicology - Salicylate-type toxicity: recognition and management basics",
+  "Toxicology - Cardiotoxic antidepressant ingestion: ECG clues and treatment approach",
+  "Toxicology - Rate-slowing drug overdose: stabilization strategy concepts",
+  "Toxicology - Opioid toxicity: reversal and observation principles",
+  "Toxicology - CO exposure: diagnosis and treatment overview",
+  "Toxicology - Toxic alcohol exposure: recognition and initial actions",
+  "Toxicology - Cholinergic crisis: recognition and antidote strategy concepts",
+  "Toxicology - Mood stabilizer toxicity: evaluation and escalation decisions",
+  "Toxicology - Digitalis-like toxicity: recognition and management approach",
+
+  // PHARMACOLOGY / ADVERSE DRUG EFFECTS (10)
+  "Pharmacology/ADE - Drug-related rhythm risk: monitoring and mitigation concepts",
+  "Pharmacology/ADE - Medication-related liver injury: evaluation approach",
+  "Pharmacology/ADE - Medication-related kidney injury: prevention strategy",
+  "Pharmacology/ADE - Anticoagulant interactions: high-impact patterns",
+  "Pharmacology/ADE - Anticoagulant dosing in kidney disease: safety approach",
+  "Pharmacology/ADE - Chronic steroid adverse effects: prevention checklist concepts",
+  "Pharmacology/ADE - Antibiotic durations: avoiding over-treatment principles",
+  "Pharmacology/ADE - Serotonergic drug toxicity: prevention and recognition",
+  "Pharmacology/ADE - High-risk transitions: reconciliation priorities",
+  "Pharmacology/ADE - Opioid safety: risk reduction approach",
+
+  // RADIOLOGY / DIAGNOSTICS (10)
+  "Radiology/Diagnostics - Interpreting chest imaging: common inpatient patterns",
+  "Radiology/Diagnostics - D-dimer use: when it adds value (conceptual)",
+  "Radiology/Diagnostics - PE imaging choices: selecting the right test",
+  "Radiology/Diagnostics - Head imaging: when it’s needed (conceptual)",
+  "Radiology/Diagnostics - Incidental adrenal finding: evaluation pathway",
+  "Radiology/Diagnostics - Thyroid nodule workup: approach and triage",
+  "Radiology/Diagnostics - RUQ pain imaging: choosing the modality",
+  "Radiology/Diagnostics - Echocardiography: common indications (conceptual)",
+  "Radiology/Diagnostics - Contrast risk: minimizing harm approach",
+  "Radiology/Diagnostics - Low-value testing: avoiding common traps",
+
+  // BIOSTATISTICS / STUDY DESIGN (10)
+  "Biostatistics/Study Design - Test performance: interpreting positives/negatives",
+  "Biostatistics/Study Design - Likelihood concepts: moving from suspicion to probability",
+  "Biostatistics/Study Design - Treatment effect: absolute vs relative thinking",
+  "Biostatistics/Study Design - Uncertainty: confidence intervals in practice",
+  "Biostatistics/Study Design - Bias/confounding: recognizing in studies",
+  "Biostatistics/Study Design - Study design types: strengths and limitations",
+  "Biostatistics/Study Design - Screening biases: common illusions",
+  "Biostatistics/Study Design - Time-to-event results: interpreting hazard concepts",
+  "Biostatistics/Study Design - Combining studies: heterogeneity concept",
+  "Biostatistics/Study Design - Threshold tradeoffs: sensitivity/specificity balancing",
+
+  // TRAVEL / GLOBAL MEDICINE (10)
+  "Travel/Global Medicine - Traveler GI illness: management approach",
+  "Travel/Global Medicine - Malaria prevention: selecting prophylaxis (conceptual)",
+  "Travel/Global Medicine - Fever after travel: initial differential framework",
+  "Travel/Global Medicine - Tropical febrile illnesses: distinguishing patterns (conceptual)",
+  "Travel/Global Medicine - Pre-travel vaccines: planning approach",
+  "Travel/Global Medicine - Altitude illness: prevention and early treatment",
+  "Travel/Global Medicine - Water exposure infection: evaluation approach",
+  "Travel/Global Medicine - Animal bite risk: prevention and post-exposure steps (conceptual)",
+  "Travel/Global Medicine - TB screening: choosing a test (conceptual)",
+  "Travel/Global Medicine - Parasitic clues: eosinophilia workup overview"
+];
+
+  const POTLUCK_RATE = 0.10;
+
+const DEFAULT_GR_TOPICS = [
+  // Hypertension management (10)
+  "Hypertension management - Resistant patterns: evaluation approach",
+  "Hypertension management - Secondary contributors: screening strategy",
+  "Hypertension management - Renal/vascular contributors: when to suspect",
+  "Hypertension management - Severe elevations: immediate management principles",
+  "Hypertension management - Outpatient escalation: stepwise medication concepts",
+  "Hypertension management - Home monitoring: technique and interpretation",
+  "Hypertension management - CKD comorbidity: medication framework",
+  "Hypertension management - Diabetes comorbidity: management principles",
+  "Hypertension management - Pregnancy context: safe management overview",
+  "Hypertension management - White coat vs masked patterns: confirmation approach",
+
+  // Lifestyle medicine (10)
+  "Lifestyle medicine - Dietary patterns: counseling approach",
+  "Lifestyle medicine - Exercise prescription: practical framework",
+  "Lifestyle medicine - Weight change strategies: behavior-first plan",
+  "Lifestyle medicine - Sleep and health: practical intervention approach",
+  "Lifestyle medicine - Tobacco cessation: toolkit overview",
+  "Lifestyle medicine - Alcohol counseling: brief intervention approach",
+  "Lifestyle medicine - Prediabetes: prevention strategy overview",
+  "Lifestyle medicine - Lipids: lifestyle levers and expected effects",
+  "Lifestyle medicine - Blood pressure: lifestyle bundle overview",
+  "Lifestyle medicine - Stress and resilience: evidence-informed options",
+
+  // Testicular cancer (10)
+  "Testicular cancer - Scrotal mass: evaluation pathway",
+  "Testicular cancer - Tumor marker concept: interpretation overview",
+  "Testicular cancer - Imaging triage: next steps framework",
+  "Testicular cancer - Staging overview: what to check (conceptual)",
+  "Testicular cancer - Histologic patterns: management implications (conceptual)",
+  "Testicular cancer - Surveillance vs treatment: decision framework (conceptual)",
+  "Testicular cancer - Fertility counseling: key steps",
+  "Testicular cancer - Acute scrotal pain: dangerous differential overview",
+  "Testicular cancer - Metastatic patterns: recognition clues",
+  "Testicular cancer - Long-term follow-up: late effects overview",
+
+  // Migraine management (10)
+  "Migraine management - Acute therapy: selection framework",
+  "Migraine management - Safety/contraindication thinking: practical overview",
+  "Migraine management - Prolonged attack: escalation approach",
+  "Migraine management - Prevention: who benefits and options overview",
+  "Migraine management - Rebound patterns: recognition and plan",
+  "Migraine management - Aura vs other neuro symptoms: triage framework",
+  "Migraine management - Newer preventives: practical use overview",
+  "Migraine management - Pregnancy context: safe options overview",
+  "Migraine management - Secondary headache red flags: triage approach",
+  "Migraine management - Nonpharm prevention: structure and expectations",
+
+  // Prostate cancer (10)
+  "Prostate cancer - PSA discussions: shared decision framework",
+  "Prostate cancer - Elevated PSA: next step approach",
+  "Prostate cancer - Interpreting PSA patterns: conceptual overview",
+  "Prostate cancer - Biopsy pathway: indications overview",
+  "Prostate cancer - Localized disease: management options concept",
+  "Prostate cancer - Metastatic clues: symptom patterns to recognize",
+  "Prostate cancer - Hormonal therapy: common effects and monitoring approach",
+  "Prostate cancer - LUTS vs malignancy: evaluation thinking",
+  "Prostate cancer - Hematuria risk: evaluation approach",
+  "Prostate cancer - Bone protection during therapy: prevention overview"
+];
+
+  const KEY = "im_topic_runner_simple_v2";
   const $ = (id) => document.getElementById(id);
 
   function pad2(x){ return String(x).padStart(2,"0"); }
   function nowStamp(){
     const d = new Date();
-    const y = d.getFullYear();
-    const m = pad2(d.getMonth()+1);
-    const da = pad2(d.getDate());
-    const hh = pad2(d.getHours());
-    const mm = pad2(d.getMinutes());
-    return `${y}-${m}-${da} ${hh}:${mm}`;
+    return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   }
   function todayTop(){
     const d = new Date();
@@ -220,78 +647,143 @@
   function loadState(){
     try{
       const raw = localStorage.getItem(KEY);
-      if(!raw) return { current:null, history:[] };
+      if(!raw) return { mode:"general", current:null, history:[], grTopicsText: DEFAULT_GR_TOPICS.join("\n") };
       const s = JSON.parse(raw);
+      s.mode = (s.mode === "grand_rounds" ? "grand_rounds" : "general");
       s.history = Array.isArray(s.history) ? s.history : [];
+      if(typeof s.grTopicsText !== "string" || !s.grTopicsText.trim()){
+        s.grTopicsText = DEFAULT_GR_TOPICS.join("\n");
+      }
       return s;
     }catch{
-      return { current:null, history:[] };
+      return { mode:"general", current:null, history:[], grTopicsText: DEFAULT_GR_TOPICS.join("\n") };
     }
   }
   function saveState(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
 
-  function pickTopic(){
+  function getGRTopics(s){
+    const lines = (s.grTopicsText || "").split("\n").map(x=>x.trim()).filter(Boolean);
+    return lines.length ? lines : [...DEFAULT_GR_TOPICS];
+  }
+
+  function pickGeneralTopic(){
     const wantPotluck = Math.random() < POTLUCK_RATE;
-    if (wantPotluck) return "Potluck (anything)";
-    const pool = TOPICS.filter(t => t !== "Potluck (anything)");
+    if(wantPotluck) return "Potluck (anything)";
+    const pool = GENERAL_TOPICS.filter(t => t !== "Potluck (anything)");
     return pool[Math.floor(Math.random() * pool.length)];
+  }
+  function pickGRTopic(grList){
+    return grList[Math.floor(Math.random() * grList.length)];
+  }
+  function pickTopicForMode(s){
+    return (s.mode === "grand_rounds") ? pickGRTopic(getGRTopics(s)) : pickGeneralTopic();
   }
 
   function ensureCurrent(s){
-    if(!s.current){
-      s.current = { when: nowStamp(), topic: pickTopic() };
+    if(!s.current || s.current.mode !== s.mode){
+      s.current = { when: nowStamp(), topic: pickTopicForMode(s), mode: s.mode };
       saveState(s);
     }
     return s.current;
   }
 
-  function buildPrompt(topic){
-    return `Please give me a board-style Internal Medicine MCQ A-E in ${topic}. Don't give the answer. After I answer with a single letter please tell me the correct answer and why.`;
+  // --- HELPER TO SPLIT CATEGORY AND SUBCATEGORY ---
+  function parseTopic(t){
+    if(!t) return { cat:"", sub:"" };
+    if(t === "Potluck (anything)") return { cat:"General", sub:t };
+    
+    // Split by " - " (space hyphen space)
+    const parts = t.split(" - ");
+    if(parts.length < 2) return { cat: "General", sub: t };
+    
+    // Assume first part is Category, rest is Subcategory
+    const cat = parts[0];
+    const sub = parts.slice(1).join(" - ");
+    return { cat, sub };
+  }
+
+  function buildPrompt(mode, topic){
+    // Parse topic to ensure prompt is explicit
+    const { cat, sub } = parseTopic(topic);
+    
+    // Construct clearer topic string for prompt
+    let topicText = topic;
+    if(cat !== "General"){
+      topicText = `the category of "${cat}" specifically regarding "${sub}"`;
+    }
+
+    const prefix = (mode === "grand_rounds")
+      ? "Please give me a Grand Rounds-style Internal Medicine MCQ A-E in"
+      : "Please give me a board-style Internal Medicine MCQ A-E in";
+    return `${prefix} ${topicText}. Don't give the answer. After I answer with a single letter please tell me the correct answer and why.`;
   }
 
   function recomputeByArea(history){
     const by = {};
     for(const h of history){
-      const area = h.topic;
-      if(!by[area]) by[area] = { n:0, c:0 };
-      by[area].n += 1;
-      if(h.correct) by[area].c += 1;
+      // Group by the full unique topic string
+      const key = `${h.mode === "grand_rounds" ? "GR" : "GEN"}: ${h.topic}`;
+      if(!by[key]) by[key] = { n:0, c:0, rawTopic: h.topic };
+      by[key].n += 1;
+      if(h.correct) by[key].c += 1;
     }
     return by;
   }
-
-  function fmtPct(n,d){
-    if(!d) return "0%";
-    return Math.round((n/d)*100) + "%";
-  }
+  function fmtPct(n,d){ return d ? (Math.round((n/d)*100) + "%") : "0%"; }
 
   function totalStats(history){
     const n = history.length;
-    const c = history.reduce((acc,h)=>acc+(h.correct?1:0),0);
+    const c = history.reduce((a,h)=>a+(h.correct?1:0),0);
     return { n, c, pct: fmtPct(c,n) };
   }
 
-  function recordAnswer(isCorrect){
+  function showModal(){ $("modalBackdrop").style.display = "flex"; }
+  function hideModal(){ $("modalBackdrop").style.display = "none"; }
+
+  async function copyAndOpen(){
+    const s = loadState();
+    ensureCurrent(s);
+
+    const prompt = ($("prompt").value || "").trim();
+    try{ await navigator.clipboard.writeText(prompt); }catch(e){}
+
+    window.open(OPEN_EVIDENCE_URL, "_blank", "noopener,noreferrer");
+    showModal();
+  }
+
+  function addAttempt(isCorrect){
     const s = loadState();
     const cur = ensureCurrent(s);
 
     s.history.unshift({
       id: String(Date.now()) + "_" + Math.floor(Math.random()*1e9),
       when: nowStamp(),
+      mode: cur.mode,
       topic: cur.topic,
-      correct: !!isCorrect
+      correct: !!isCorrect,
+      note: ""
     });
 
-    // pick next
-    s.current = { when: nowStamp(), topic: pickTopic() };
-
+    s.current = { when: nowStamp(), topic: pickTopicForMode(s), mode: s.mode };
     saveState(s);
     render();
   }
 
   function nextTopic(){
     const s = loadState();
-    s.current = { when: nowStamp(), topic: pickTopic() };
+    s.current = { when: nowStamp(), topic: pickTopicForMode(s), mode: s.mode };
+    saveState(s);
+    render();
+  }
+
+  function editNote(id){
+    const s = loadState();
+    const item = s.history.find(h => h.id === id);
+    if(!item) return;
+    const cur = item.note || "";
+    const txt = prompt("Note (optional):", cur);
+    if(txt === null) return;
+    item.note = (txt || "").trim();
     saveState(s);
     render();
   }
@@ -309,49 +801,41 @@
     render();
   }
 
-  function showModal(){ $("modalBackdrop").style.display = "flex"; }
-  function hideModal(){ $("modalBackdrop").style.display = "none"; }
-
-  async function copyAndOpen(){
-    const s = loadState();
-    const cur = ensureCurrent(s);
-    const prompt = buildPrompt(cur.topic);
-    $("prompt").value = prompt;
-
-    try { await navigator.clipboard.writeText(prompt); }
-    catch(e){ /* clipboard may be blocked on some file:// setups */ }
-
-    window.open(OPEN_EVIDENCE_URL, "_blank", "noopener,noreferrer");
-    showModal();
-  }
-
   function renderHistory(history){
     const el = $("history");
     $("historyCount").textContent = `${history.length} entries`;
     const max = 16;
-    const items = history.slice(0, max);
+    const items = history.slice(0,max);
 
-    if(items.length === 0){
+    if(!items.length){
       el.innerHTML = `<li><span class="k">No history yet</span><span class="v">—</span></li>`;
       return;
     }
 
     el.innerHTML = items.map(h => {
       const mark = h.correct ? `<span class="markOk">Correct</span>` : `<span class="markBad">Incorrect</span>`;
+      const modeTag = h.mode === "grand_rounds" ? "GR" : "GEN";
+      const noteTag = h.note ? " • note" : "";
+      
+      const { cat, sub } = parseTopic(h.topic);
+      const displayTopic = (cat !== "General") 
+        ? `<span style="color:var(--dim)">${cat}</span> / ${sub}`
+        : sub;
+
       return `
         <li>
-          <span class="k">${h.when} • ${h.topic}</span>
+          <span class="k">${h.when} • ${modeTag}: ${displayTopic}${noteTag}</span>
           <span style="display:flex;gap:8px;align-items:center;">
             ${mark}
-            <button class="miniBtn" data-del="${h.id}" title="Delete this entry">Delete</button>
+            <button class="miniBtn" data-note="${h.id}" title="Add/edit note">Note</button>
+            <button class="miniBtn" data-del="${h.id}" title="Delete">Delete</button>
           </span>
         </li>
       `;
     }).join("");
 
-    el.querySelectorAll("[data-del]").forEach(btn => {
-      btn.onclick = () => deleteEntry(btn.getAttribute("data-del"));
-    });
+    el.querySelectorAll("[data-note]").forEach(btn => btn.onclick = () => editNote(btn.getAttribute("data-note")));
+    el.querySelectorAll("[data-del]").forEach(btn => btn.onclick = () => deleteEntry(btn.getAttribute("data-del")));
   }
 
   function renderCoverage(history, byArea){
@@ -361,76 +845,104 @@
       el.innerHTML = `<li><span class="k">—</span><span class="v">No data yet</span></li>`;
       return;
     }
-
-    const rows = Object.keys(byArea).map(area => {
-      const a = byArea[area];
+    const rows = Object.keys(byArea).map(k => {
+      const a = byArea[k];
       const share = a.n / tot;
       const acc = a.n ? (a.c / a.n) : 0;
-      return { area, n:a.n, share, acc };
-    }).sort((a,b) => b.n - a.n).slice(0,10);
+      return { k, n:a.n, share, acc, rawTopic: a.rawTopic };
+    }).sort((a,b)=>b.n-a.n).slice(0,10);
 
     el.innerHTML = rows.map(r => {
       const sharePct = Math.round(r.share*100) + "%";
       const accPct = Math.round(r.acc*100) + "%";
-      return `<li><span class="k">${r.area}</span><span class="v">${sharePct} <span class="k">(acc ${accPct}, n=${r.n})</span></span></li>`;
+      
+      const { cat, sub } = parseTopic(r.rawTopic);
+      const label = (cat !== "General") 
+        ? `<span style="color:var(--dim)">${cat}</span> / ${sub}`
+        : sub;
+
+      return `<li><span class="k">${label}</span><span class="v">${sharePct} <span class="k">(acc ${accPct}, n=${r.n})</span></span></li>`;
     }).join("");
   }
 
   function renderStrengthWeak(byArea){
     const strengths = $("strengths");
     const weaknesses = $("weaknesses");
-    strengths.innerHTML = "";
-    weaknesses.innerHTML = "";
+    strengths.innerHTML = ""; weaknesses.innerHTML = "";
 
-    const rows = Object.keys(byArea).map(area => {
-      const a = byArea[area];
-      const n = a.n||0, c = a.c||0;
+    const rows = Object.keys(byArea).map(k => {
+      const a = byArea[k];
+      const n = a.n||0, c=a.c||0;
       const pct = n ? (c/n) : 0;
-      return { area, n, c, pct };
+      return { k, n, pct, rawTopic: a.rawTopic };
     }).filter(r => r.n >= 2);
 
-    if(rows.length === 0){
+    if(!rows.length){
       strengths.innerHTML = `<li><span class="k">—</span><span class="v">Need ≥2 attempts</span></li>`;
       weaknesses.innerHTML = `<li><span class="k">—</span><span class="v">Need ≥2 attempts</span></li>`;
       return;
     }
 
-    const top = [...rows].sort((a,b) => (b.pct-a.pct) || (b.n-a.n)).slice(0,5);
-    const bot = [...rows].sort((a,b) => (a.pct-b.pct) || (b.n-a.n)).slice(0,5);
+    const top = [...rows].sort((a,b)=>(b.pct-a.pct)||(b.n-a.n)).slice(0,5);
+    const bot = [...rows].sort((a,b)=>(a.pct-b.pct)||(b.n-a.n)).slice(0,5);
 
-    strengths.innerHTML = top.map(r =>
-      `<li><span class="k">${r.area}</span><span class="v">${Math.round(r.pct*100)}% <span class="k">(n=${r.n})</span></span></li>`
-    ).join("");
+    function mkRow(r){
+      const { cat, sub } = parseTopic(r.rawTopic);
+      const label = (cat !== "General") 
+        ? `<span style="color:var(--dim)">${cat}</span> / ${sub}`
+        : sub;
+      return `<li><span class="k">${label}</span><span class="v">${Math.round(r.pct*100)}% <span class="k">(n=${r.n})</span></span></li>`;
+    }
 
-    weaknesses.innerHTML = bot.map(r =>
-      `<li><span class="k">${r.area}</span><span class="v">${Math.round(r.pct*100)}% <span class="k">(n=${r.n})</span></span></li>`
-    ).join("");
+    strengths.innerHTML = top.map(mkRow).join("");
+    weaknesses.innerHTML = bot.map(mkRow).join("");
   }
 
   function render(){
     $("nowTop").textContent = todayTop();
-
     const s = loadState();
     const cur = ensureCurrent(s);
 
+    document.querySelectorAll('input[name="mode"]').forEach(r => r.checked = (r.value === s.mode));
+
     $("currentWhen").textContent = `When: ${cur.when}`;
-    $("currentTopic").textContent = cur.topic;
-    $("prompt").value = buildPrompt(cur.topic);
+    
+    // RENDER CURRENT TOPIC (Heading) WITH CAT/SUB SPLIT
+    const { cat, sub } = parseTopic(cur.topic);
+    if(cat !== "General"){
+      $("currentTopic").innerHTML = `<div class="cat-sub-split"><span class="cat">${cat}</span><span class="sub">${sub}</span></div>`;
+    } else {
+      $("currentTopic").textContent = cur.topic;
+    }
+
+    $("modeBadge").textContent = `Mode: ${s.mode === "grand_rounds" ? "Grand Rounds" : "General (Boards)"}`;
+
+    // Update answered-line topic
+    const modeTag = (s.mode === "grand_rounds") ? "GR" : "GEN";
+    $("answeredTopic").textContent = `${modeTag}: ${cur.topic}`;
+
+    // Prompt Update Logic
+    const defaultPrompt = buildPrompt(s.mode, cur.topic);
+    // If prompt is empty or doesn't match current topic substructure, reset it
+    if(!$("prompt").value.trim()){
+      $("prompt").value = defaultPrompt;
+    } else {
+      const p = $("prompt").value;
+      // Heuristic: check if current subcategory is in text, if not reset
+      if(!p.includes(sub)){
+        $("prompt").value = defaultPrompt;
+      }
+    }
+
+    $("grTopics").value = s.grTopicsText;
 
     const byArea = recomputeByArea(s.history);
     const tot = totalStats(s.history);
 
+    $("overallPill").textContent = `${tot.n} answered • ${tot.pct}`;
     $("sumN").textContent = tot.n;
     $("sumC").textContent = tot.c;
     $("sumPct").textContent = tot.pct;
-    $("overallPill").textContent = `${tot.n} answered • ${tot.pct}`;
-
-    // unseen categories = topics with 0 attempts (including potluck)
-    let unseen = 0;
-    for(const t of TOPICS){
-      if(!byArea[t] || (byArea[t].n||0) === 0) unseen += 1;
-    }
-    $("unseenN").textContent = unseen;
 
     renderHistory(s.history);
     renderCoverage(s.history, byArea);
@@ -439,13 +951,32 @@
 
   // events
   $("btnCopyOpen").onclick = copyAndOpen;
-  $("btnCorrect").onclick = () => recordAnswer(true);
-  $("btnIncorrect").onclick = () => recordAnswer(false);
+  $("btnCorrect").onclick = () => addAttempt(true);
+  $("btnIncorrect").onclick = () => addAttempt(false);
   $("btnNext").onclick = nextTopic;
   $("btnReset").onclick = resetAll;
 
   $("btnModalOk").onclick = hideModal;
   $("modalBackdrop").onclick = (e) => { if(e.target === $("modalBackdrop")) hideModal(); };
+
+  document.querySelectorAll('input[name="mode"]').forEach(r => {
+    r.onchange = () => {
+      const s = loadState();
+      s.mode = (r.value === "grand_rounds") ? "grand_rounds" : "general";
+      s.current = { when: nowStamp(), topic: pickTopicForMode(s), mode: s.mode };
+      saveState(s);
+      $("prompt").value = buildPrompt(s.mode, s.current.topic);
+      render();
+    };
+  });
+
+  $("btnSaveGR").onclick = () => {
+    const s = loadState();
+    s.grTopicsText = ($("grTopics").value || "").trim() || DEFAULT_GR_TOPICS.join("\n");
+    saveState(s);
+    alert("Saved Grand Rounds topics.");
+    render();
+  };
 
   render();
 })();
