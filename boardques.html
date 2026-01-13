@@ -680,7 +680,11 @@ const DEFAULT_GR_TOPICS = [
   }
 
   function ensureCurrent(s){
-    if(!s.current || s.current.mode !== s.mode){
+    // If no topic, or mode mismatch, OR topic doesn't look like "Cat - Sub" (and isn't Potluck), force new.
+    // This fixes the stale "Cardiology" string issue.
+    const isMalformed = (s.current && s.current.topic && s.current.topic !== "Potluck (anything)" && !s.current.topic.includes(" - "));
+
+    if(!s.current || s.current.mode !== s.mode || isMalformed){
       s.current = { when: nowStamp(), topic: pickTopicForMode(s), mode: s.mode };
       saveState(s);
     }
@@ -721,9 +725,17 @@ const DEFAULT_GR_TOPICS = [
   function recomputeByArea(history){
     const by = {};
     for(const h of history){
-      // Group by the full unique topic string
-      const key = `${h.mode === "grand_rounds" ? "GR" : "GEN"}: ${h.topic}`;
-      if(!by[key]) by[key] = { n:0, c:0, rawTopic: h.topic };
+      // Aggregate by Category (not full topic)
+      const { cat, sub } = parseTopic(h.topic);
+      const modeTag = h.mode === "grand_rounds" ? "GR" : "GEN";
+      
+      // If "General" category (Potluck), use the sub-name so they don't all clump as "General"
+      const groupLabel = (cat === "General") ? sub : cat;
+      
+      const key = `${modeTag}: ${groupLabel}`;
+      
+      if(!by[key]) by[key] = { n:0, c:0, label: groupLabel, modeTag };
+      
       by[key].n += 1;
       if(h.correct) by[key].c += 1;
     }
@@ -849,19 +861,17 @@ const DEFAULT_GR_TOPICS = [
       const a = byArea[k];
       const share = a.n / tot;
       const acc = a.n ? (a.c / a.n) : 0;
-      return { k, n:a.n, share, acc, rawTopic: a.rawTopic };
+      return { k, n:a.n, share, acc, label: a.label, modeTag: a.modeTag };
     }).sort((a,b)=>b.n-a.n).slice(0,10);
 
     el.innerHTML = rows.map(r => {
       const sharePct = Math.round(r.share*100) + "%";
       const accPct = Math.round(r.acc*100) + "%";
-      
-      const { cat, sub } = parseTopic(r.rawTopic);
-      const label = (cat !== "General") 
-        ? `<span style="color:var(--dim)">${cat}</span> / ${sub}`
-        : sub;
+      // Display: "GR: Cardiology" or just "Cardiology" with implicit mode from color/context? 
+      // User requested "by category". We will show "Mode: Category".
+      const disp = `<span style="color:var(--dim)">${r.modeTag}:</span> ${r.label}`;
 
-      return `<li><span class="k">${label}</span><span class="v">${sharePct} <span class="k">(acc ${accPct}, n=${r.n})</span></span></li>`;
+      return `<li><span class="k">${disp}</span><span class="v">${sharePct} <span class="k">(acc ${accPct}, n=${r.n})</span></span></li>`;
     }).join("");
   }
 
@@ -874,7 +884,7 @@ const DEFAULT_GR_TOPICS = [
       const a = byArea[k];
       const n = a.n||0, c=a.c||0;
       const pct = n ? (c/n) : 0;
-      return { k, n, pct, rawTopic: a.rawTopic };
+      return { k, n, pct, label: a.label, modeTag: a.modeTag };
     }).filter(r => r.n >= 2);
 
     if(!rows.length){
@@ -887,11 +897,8 @@ const DEFAULT_GR_TOPICS = [
     const bot = [...rows].sort((a,b)=>(a.pct-b.pct)||(b.n-a.n)).slice(0,5);
 
     function mkRow(r){
-      const { cat, sub } = parseTopic(r.rawTopic);
-      const label = (cat !== "General") 
-        ? `<span style="color:var(--dim)">${cat}</span> / ${sub}`
-        : sub;
-      return `<li><span class="k">${label}</span><span class="v">${Math.round(r.pct*100)}% <span class="k">(n=${r.n})</span></span></li>`;
+      const disp = `<span style="color:var(--dim)">${r.modeTag}:</span> ${r.label}`;
+      return `<li><span class="k">${disp}</span><span class="v">${Math.round(r.pct*100)}% <span class="k">(n=${r.n})</span></span></li>`;
     }
 
     strengths.innerHTML = top.map(mkRow).join("");
@@ -977,6 +984,11 @@ const DEFAULT_GR_TOPICS = [
     alert("Saved Grand Rounds topics.");
     render();
   };
+
+  // FORCE RANDOMIZE ON OPEN (fixes stale 'Cardiology' bug)
+  const s = loadState();
+  s.current = null; 
+  saveState(s);
 
   render();
 })();
