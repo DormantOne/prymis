@@ -1,10 +1,11 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>Lantern — a serial storybook engine</title>
+<title>Lantern v2 — scene-first serial storybook engine</title>
 <style>
 /* ═══════ themes: the chrome is the machine, the page is lit ═══════ */
 [data-theme="lantern"]{--ground:#12131f;--chrome:#1a1c2c;--chrome2:#23263a;--rule:#32364f;
@@ -229,7 +230,7 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
 <header style="position:static">
   <h1><svg class="mark" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M9.5 2h5M11 2v3M13 2v3M7 5h10l1.2 3H5.8zM6.6 8h10.8v9H6.6zM4.5 20h15M11 17v3M13 17v3"/>
-      <path d="M10 10.5h4v4h-4z" fill="currentColor" stroke="none"/></svg>Lantern<small>serial storybook</small></h1>
+      <path d="M10 10.5h4v4h-4z" fill="currentColor" stroke="none"/></svg>Lantern<small>scene-first serial storybook</small></h1>
   <div class="grow"></div>
   <span class="plate" id="hd">no chapters yet</span>
   <select class="theme" id="theme">
@@ -277,19 +278,19 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
     </div>
     <div>
       <div class="panel">
-        <h2><span>1 · Build the prompt</span><span class="plate" id="nexttag">chapter 1</span></h2>
+        <h2><span id="buildhead">1 · Build the story</span><span class="plate" id="nexttag">story pass</span></h2>
         <div class="in">
           <div class="msg" id="scenenote"></div>
           <label class="f"><span>Note for this chapter (optional)</span>
             <textarea id="steer" placeholder="Where you want it to go, what to hold back, a line you want in there."></textarea></label>
-          <div class="row"><button class="b on" id="build">Build</button><button class="b" id="copy">Copy</button></div>
+          <div class="row"><button class="b on" id="build">Build story architecture</button><button class="b" id="copy">Copy</button></div>
           <pre class="out" id="prompt">Set a premise on the Story tab, then build.</pre>
         </div>
       </div>
       <div class="panel">
         <h2><span>Sealed bible</span><button class="b sm" id="unseal">Break seal</button></h2>
         <div class="in">
-          <p class="note">The plan, the planted guns, the scene slate, the ending. Sealed against <b>you</b>, not the model — the opposite of a blind. The model must read it to keep continuity; the blur is so you can open your save file without spoiling your own story.</p>
+          <p class="note">The story arc, relationships, planted guns, scene ledger, completed-scene memory, and the ending. Sealed against <b>you</b>, not the model — the opposite of a blind. The model must read it to keep continuity; the blur is so you can open your save file without spoiling your own story.</p>
           <div class="seal" id="sealbox">Nothing sealed yet.</div>
         </div>
       </div>
@@ -297,8 +298,8 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
         <h2><span>2 · Record the reply</span><span class="plate" id="gate">untested</span></h2>
         <div class="in">
           <label class="f"><span>Paste the model's JSON</span><textarea id="paste" class="huge" placeholder="Paste the whole reply. Fences, preamble and postamble are fine — they get stripped."></textarea></label>
-          <div class="row"><button class="b on" id="test">Test JSON</button><button class="b" id="record" disabled>Record chapter</button><button class="b" id="schema">Copy schema</button></div>
-          <p class="note">Nothing is recorded until it has been parsed. A paste that fails is reported with the line and column, so you can tell the model where it broke.</p>
+          <div class="row"><button class="b on" id="test">Test JSON</button><button class="b" id="record" disabled>Record story map</button><button class="b" id="schema">Copy schema</button></div>
+          <p class="note">Nothing is recorded until it has been parsed. The first accepted reply records architecture only; it does not write chapter prose. A paste that fails is reported with the line and column, so you can tell the model where it broke.</p>
           <div id="msg"></div>
         </div>
       </div>
@@ -315,6 +316,13 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
       <label class="f"><span>What happens</span><textarea id="premise" class="big" placeholder="One or two paragraphs. Who, where, what goes wrong, what is at stake. Concrete beats clever."></textarea></label>
       <label class="f"><span>World &amp; texture</span><textarea id="world" placeholder="Period, place, weather, the physical detail you want recurring. What the reader should smell and hear."></textarea></label>
       <label class="f"><span>The ending you are steering toward — sealed</span><textarea id="ending" placeholder="Optional but powerful. If you know where it lands, say so. This goes in the sealed bible: the model plans toward it and never leaks it."></textarea></label>
+    </div></div>
+    <div class="panel"><h2><span>Story architecture</span><span class="plate" id="archtag">not built</span></h2><div class="in">
+      <p class="note">The first model pass builds this before any prose: the whole arc, then the scene stubs that realize it. It is saved in browser memory and in book.json.</p>
+      <pre class="out" id="arcbox" style="max-height:340px">No story arc yet.</pre>
+    </div></div>
+    <div class="panel"><h2><span>Relationships</span><span class="plate" id="reltag">none yet</span></h2><div class="in">
+      <div id="relationships"><p class="empty">The architecture pass will build the relationship map.</p></div>
     </div></div>
     <div class="panel"><h2>Table of contents</h2><div class="in" id="toc"><p class="empty">No chapters yet.</p></div></div>
   </div><div>
@@ -340,26 +348,26 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
 <!-- ═══════ SCENES ═══════ -->
 <section class="view" data-v="scenes">
   <div class="cols"><div>
-    <div class="panel"><h2><span>Possible next scenes</span><span class="plate" id="scenetag">no slate yet</span></h2>
+    <div class="panel"><h2><span>Persistent scene ledger</span><span class="plate" id="scenetag">not built yet</span></h2>
       <div class="in">
-        <p class="note">Every chapter the model puts a slate on the table: scenes it could write next, what each one would move, and what each one would cost. Taking one is optional — choose nothing and it decides for itself, which is a different book than the one where you choose.</p>
+        <p class="note">The architecture pass builds scene stubs before prose begins. After that, every prompt carries the ledger. If you choose nothing, the model must select the best <b>very next</b> unfinished scene — normally the earliest viable stub whose prerequisites are satisfied, not the most dramatic later scene.</p>
         <div id="scenelist"></div>
       </div></div>
-    <div class="panel"><h2>Write your own scene</h2><div class="in">
-      <p class="note">If none of them is the one, say what is. Yours goes in as the same kind of instruction.</p>
+    <div class="panel"><h2>Override the next scene</h2><div class="in">
+      <p class="note">Normally leave this alone and let the model pick the next scene. Use this only when you want to override the ledger.</p>
       <label class="f"><span>What happens next</span><textarea id="ownscene" placeholder="A place, a person, a thing that happens. One or two lines — not a summary of the chapter."></textarea></label>
       <div class="row"><button class="b" id="ownscene-use">Use this</button><button class="b" id="scene-clear">Choose nothing</button></div>
     </div></div>
   </div><div>
     <div class="panel"><h2><span>Chosen for chapter <span id="scenechno">1</span></span><span class="plate" id="chosentag">nothing</span></h2>
       <div class="in" id="scenechosen"></div></div>
-    <div class="panel"><h2><span>The slate under compression</span><span class="plate">rewritten, not appended</span></h2><div class="in">
-      <p class="note">The slate is rebuilt each chapter inside a budget, on the same terms as the summary. Options the last chapter spent, foreclosed, or made obvious are dropped rather than carried, and the count does not grow as the book does.</p>
+    <div class="panel"><h2><span>Scene memory</span><span class="plate">ledger + compressed history</span></h2><div class="in">
+      <p class="note">Every prompt carries the persistent scene ledger. Completed scenes stay present as compact records; a bounded scene-memory paragraph is rewritten after every chapter, and the most recent prose contributes a short continuity sample.</p>
       <div class="g2">
-        <label class="f"><span>Options per chapter</span><input id="scene-n" type="number" min="2" max="6" value="4"></label>
-        <label class="f"><span>Words per option</span><input id="scene-w" type="number" min="10" max="60" step="2" value="26"></label>
+        <label class="f"><span>Initial scene stubs (minimum)</span><input id="scene-n" type="number" min="4" max="30" value="12"></label>
+        <label class="f"><span>Words per stub</span><input id="scene-w" type="number" min="10" max="60" step="2" value="26"></label>
       </div>
-      <label class="f"><span>Scenes already taken</span><textarea id="scenelog" class="big" readonly placeholder="Nothing taken yet."></textarea></label>
+      <label class="f"><span>Completed-scene memory</span><textarea id="scenelog" class="big" readonly placeholder="Nothing completed yet."></textarea></label>
     </div></div>
   </div></div>
 </section>
@@ -418,11 +426,12 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
 <section class="view" data-v="craft">
   <div class="cols"><div>
     <div class="panel"><h2>Compression</h2><div class="in">
-      <p class="note">Every chapter, the model rewrites the whole story-so-far inside a word budget rather than appending to it. Appending is not compression — it just defers the problem until the context breaks. This is the part that gets better as models get better.</p>
+      <p class="note">Every chapter, the model rewrites the whole story-so-far inside a word budget rather than appending to it. Scene memory is separate: scene-shaped, bounded, and paired with at most one recent prose sample. Appending is not compression — it just defers the problem until the context breaks. This is the part that gets better as models get better.</p>
       <div class="g2">
         <label class="f"><span>Summary budget (words)</span><input id="cbudget" type="number" min="80" max="1200" step="20" value="320"></label>
-        <label class="f"><span>Chapters shown in full</span><input id="cfull" type="number" min="0" max="6" value="1"></label>
+        <label class="f"><span>Include one recent prose sample</span><input id="cfull" type="number" min="0" max="1" value="1"></label>
       </div>
+      <label class="f"><span>Completed-scene memory budget (words)</span><input id="scene-hist-budget" type="number" min="80" max="800" step="20" value="260"></label>
       <p class="note" id="slatenote"></p>
       <label class="f"><span>Story so far — as the model last compressed it</span><textarea id="sofar" class="big" readonly></textarea></label>
     </div></div>
@@ -438,7 +447,7 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
         <button class="b on" id="dlhtml">Book as HTML</button>
         <button class="b" id="dltxt">Export as text</button>
         <button class="b" id="reset">Reset</button></div>
-      <p class="note"><b>Book as HTML</b> is the readable one: title page, contents, every chapter, the illustrations inline, one file that opens in any browser and prints as a book. The save file is the machine's copy — settings, threads, the compressed summary, the slate.</p>
+      <p class="note"><b>Book as HTML</b> is the readable one: title page, contents, every chapter, the illustrations inline, one file that opens in any browser and prints as a book. The save file is the machine's copy — story arc, cast, relationships, scene ledger, compressed scene memory, threads and story summary.</p>
       <div class="msg" id="store"></div>
     </div></div>
   </div></div>
@@ -472,8 +481,8 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
       <div id="shelflist"></div>
     </div></div>
   </div><div>
-    <div class="panel"><h2><span>Rigs</span><span class="plate">compression · slate · shape · voice · reader</span></h2><div class="in">
-      <p class="note">A rig is everything except the story: summary budget, chapters shown in full, slate size, words per chapter, person and tense, restraint, illustration mode, the styles, the reader, the banned moves. A setting that works should not have to be found twice.</p>
+    <div class="panel"><h2><span>Rigs</span><span class="plate">compression · scene memory · shape · voice · reader</span></h2><div class="in">
+      <p class="note">A rig is everything except the story: story-summary budget, scene-memory budget, recent-sample toggle, initial scene-stub target, words per chapter, person and tense, restraint, illustration mode, styles, reader, and banned moves. A setting that works should not have to be found twice.</p>
       <div class="row"><input id="rigname" class="inline" placeholder="Name this rig"><button class="b" id="rigsave">Remember</button></div>
       <div id="riglist"></div>
     </div></div>
@@ -554,17 +563,17 @@ const CASTSEED=[
  {name:'',role:'the one who complicates it',want:'',refuse:'',voice:''}];
 
 /* ═══════ state ═══════ */
-const BLANK={v:'lantern_1',theme:'lantern',title:'',author:'',premise:'',world:'',ending:'',
+const BLANK={v:'lantern_2',theme:'lantern',title:'',author:'',premise:'',world:'',ending:'',
   planN:12,wpc:1200,pov:'close third, past',illus:'each',restraint:3,
-  cast:JSON.parse(JSON.stringify(CASTSEED)),styles:[],readers:['close'],exemplar:'',ban:'',
-  ownStyles:[],ownReaders:[],
+  cast:JSON.parse(JSON.stringify(CASTSEED)),relationships:[],storyArc:null,architectureReady:false,
+  styles:[],readers:['close'],exemplar:'',ban:'',ownStyles:[],ownReaders:[],
   cbudget:320,cfull:1,steer:'',
-  sceneN:4,sceneW:26,scenes:[],sceneChosen:null,sceneLog:[],
+  sceneN:12,sceneW:26,sceneHistoryBudget:260,scenePlan:[],sceneMemory:'',scenes:[],sceneChosen:null,sceneLog:[],
   chapters:[],sofar:'',bible:'',threads:[],plan:'',rcheck:null,cur:-1,prompt:''};
 let S=JSON.parse(JSON.stringify(BLANK));
 const K='lantern_state';
 function save(){try{localStorage.setItem(K,JSON.stringify(S));st(1);}catch(e){st(0);}}
-function load(){try{const r=localStorage.getItem(K);if(r){const o=JSON.parse(r);if(o&&o.v)S=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);}}catch(e){}}
+function load(){try{const r=localStorage.getItem(K);if(r){const o=JSON.parse(r);if(o&&o.v){S=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);S.v='lantern_2';S.relationships=Array.isArray(S.relationships)?S.relationships:[];S.architectureReady=!!S.architectureReady||(Array.isArray(S.chapters)&&S.chapters.length>0);S.scenePlan=normalizeScenePlan(Array.isArray(S.scenePlan)&&S.scenePlan.length?S.scenePlan:(S.scenes||[]));S.scenes=S.scenePlan.filter(x=>!['done','closed','foreclosed'].includes(String(x.status).toLowerCase()));}}}catch(e){}}
 function st(ok){const e=$('#store');if(!e)return;e.className='msg '+(ok?'ok':'no');
   e.innerHTML=ok?'<b>Saved in this browser.</b>Download anyway — a cache clear takes the whole book with it.'
    :'<b>Browser storage unavailable.</b>Everything works in memory. Download before you close the tab.';}
@@ -669,41 +678,55 @@ function whereFailed(text,msg){
   const snip=text.slice(from,p+70).replace(/\n/g,'\u23ce');
   return 'line '+line+', column '+col+'\n'+snip+'\n'+' '.repeat(p-from)+'^';}
 
-function checkReply(obj,budget,wantSVG,slate){
+function checkReply(obj,budget,wantSVG,slate,phase){
   const fail=[],warn=[];
-  const sN=num((slate||{}).n,4), sW=num((slate||{}).w,26);
+  const sN=num((slate||{}).n,12), sW=num((slate||{}).w,26), histBudget=num((slate||{}).histBudget,260), architecture=phase==='architecture';
   if(!obj||typeof obj!=='object'||Array.isArray(obj)){fail.push('the reply is not a JSON object');return {fail,warn};}
+  if(architecture){
+    if(!obj.story_arc||typeof obj.story_arc!=='object')fail.push('no "story_arc" — the first pass must build the whole arc before prose');
+    if(!Array.isArray(obj.cast)||obj.cast.length<2)fail.push('no usable "cast" — the first pass must create the principal characters');
+    if(!Array.isArray(obj.relationships))fail.push('no "relationships" — the first pass must map how the characters bear on one another');
+    const st=Array.isArray(obj.scene_stubs)?obj.scene_stubs:null;
+    if(!st||st.length<sN)fail.push('too few "scene_stubs" — asked for at least '+sN+' before chapter 1');
+    if(st){
+      const ids=st.map(x=>String((x||{}).id||'')).filter(Boolean);if(new Set(ids).size!==ids.length)fail.push('scene_stubs contain duplicate stable ids');
+      const thin=st.filter(x=>!x||!String(x.beat||'').trim()).length;
+      if(thin)warn.push(thin+' scene stub'+(thin===1?' has':'s have')+' no beat');
+      const over=st.filter(x=>words((x||{}).beat)>Math.round(sW*1.8)).length;
+      if(over)warn.push(over+' scene stub'+(over===1?' is':'s are')+' well over the '+sW+'-word target');
+    }
+    if(obj.chapter&&String((obj.chapter||{}).prose||'').trim())warn.push('the architecture reply contains prose — it will be ignored; chapter 1 comes on the next pass');
+    return {fail,warn};
+  }
   const ch=obj.chapter||{}, prose=String(ch.prose||'').trim();
-  if(!obj.plan) fail.push('no "plan" — pass one is missing');
+  if(!obj.scene_choice) fail.push('no "scene_choice" — every writing pass must choose the very next scene before it plans prose');
+  const choiceId=String((obj.scene_choice||{}).id||'');
+  if(obj.scene_choice&&!choiceId)fail.push('scene_choice has no stable scene id');
+  const prior=Array.isArray((slate||{}).plan)?slate.plan:[], allowed=String((slate||{}).allowedChosenId||'');
+  if(choiceId&&prior.length){const hit=prior.find(x=>String((x||{}).id||'')===choiceId);if(!hit&&choiceId!==allowed)fail.push('scene_choice id '+choiceId+' is not in the persistent scene ledger');else if(hit&&['done','closed','foreclosed'].includes(String(hit.status||'').toLowerCase()))fail.push('scene_choice selected an already completed/closed scene: '+choiceId);}
+  if(!obj.plan) fail.push('no "plan" — pass two is missing');
   if(prose.length<200) fail.push('no chapter prose, or too short to be a chapter');
   if(!obj.story_so_far) fail.push('no "story_so_far" — the next chapter would have nothing to run on');
+  if(!obj.scene_memory) warn.push('no "scene_memory" — completed scenes will lose their compressed continuity layer');
+  if(obj.scene_memory&&words(obj.scene_memory)>histBudget*1.3)warn.push('scene memory ran to '+words(obj.scene_memory)+' words against a '+histBudget+' budget');
+  const doneId=String((obj.scene_completed||{}).id||'');if(!doneId)fail.push('no scene_completed.id');else if(choiceId&&doneId!==choiceId)fail.push('scene_completed.id does not match scene_choice.id');
   if(!ch.title) warn.push('no chapter title');
-  if(prose.length>1200&&prose.indexOf('\n')<0) warn.push('prose has no paragraph breaks — check the \\n\\n survived');
-  if(/^#{1,6}\s/m.test(prose)) warn.push('markdown headings inside the prose');
-  if(obj.story_so_far&&words(obj.story_so_far)>budget*1.3)
-    warn.push('summary ran to '+words(obj.story_so_far)+' words against a '+budget+' budget');
-  if(obj.threads&&!Array.isArray(obj.threads)) warn.push('"threads" is not a list');
-  if(!obj.reader_check) warn.push('no reader check');
-  const so=Array.isArray(obj.scene_options)?obj.scene_options:null;
-  if(!so||!so.length) warn.push('no scene options came back — the Scenes tab will have nothing to offer');
-  else{
-    if(so.length<2) warn.push('a slate of one is a decision, not a choice');
-    if(so.length<sN) warn.push('asked for '+sN+' scenes, got '+so.length);
-    const thin=so.filter(x=>!x||!String(x.beat||'').trim()).length;
-    if(thin) warn.push(thin+' scene option'+(thin===1?'':'s')+' with no beat in it');
-    const over=so.filter(x=>words((x||{}).beat)>Math.round(sW*1.6)).length;
-    if(over) warn.push(over+' scene option'+(over===1?'':'s')+' well over the '+sW+'-word cap');
-    const noCost=so.filter(x=>!String((x||{}).cost||'').trim()).length;
-    if(noCost) warn.push(noCost+(noCost===1?' option that never says what it costs':' options that never say what they cost'));}
+  if(prose.length>1200&&prose.indexOf('\n')<0)warn.push('prose has no paragraph breaks — check the \\n\\n survived');
+  if(/^#{1,6}\s/m.test(prose))warn.push('markdown headings inside the prose');
+  if(obj.story_so_far&&words(obj.story_so_far)>budget*1.3)warn.push('summary ran to '+words(obj.story_so_far)+' words against a '+budget+' budget');
+  if(obj.threads&&!Array.isArray(obj.threads))warn.push('"threads" is not a list');
+  if(!obj.reader_check)warn.push('no reader check');
+  if(!Array.isArray(obj.scene_plan)||!obj.scene_plan.length)fail.push('no "scene_plan" — the persistent scene ledger must come back every writing pass');
+  else if(prior.length){const returned=new Set(obj.scene_plan.map(x=>String((x||{}).id||'')));const missing=prior.map(x=>String((x||{}).id||'')).filter(id=>id&&!returned.has(id));if(missing.length)fail.push('scene_plan dropped persistent ids: '+missing.slice(0,6).join(', ')+(missing.length>6?'…':''));}
+  if(obj.relationships&&!Array.isArray(obj.relationships))warn.push('"relationships" is not a list');
   if(wantSVG){
     const svg=String((obj.illustration||{}).svg||'').trim();
-    if(!svg) warn.push('no illustration came back');
+    if(!svg)warn.push('no illustration came back');
     else{
-      if(!/^<svg[\s>]/i.test(svg)) warn.push('illustration is not raw <svg>');
-      if(!/<\/svg>$/i.test(svg)) fail.push('the SVG is truncated — no closing </svg>');
+      if(!/^<svg[\s>]/i.test(svg))warn.push('illustration is not raw <svg>');
+      if(!/<\/svg>$/i.test(svg))fail.push('the SVG is truncated — no closing </svg>');
       const ext=svg.replace(/xmlns(:\w+)?\s*=\s*"[^"]*"/gi,'');
-      if(/<text[\s>]|<image[\s>]|<script[\s>]|<foreignObject|xlink:href|https?:\/\/|url\(\s*['"]?http/i.test(ext))
-        warn.push('SVG breaks the brief (text, raster, script or external reference)');}}
+      if(/<text[\s>]|<image[\s>]|<script[\s>]|<foreignObject|xlink:href|https?:\/\/|url\(\s*['"]?http/i.test(ext))warn.push('SVG breaks the brief (text, raster, script or external reference)');}}
   return {fail,warn};}
 
 /* pasted SVG is untrusted; strip anything executable before it touches the page */
@@ -857,7 +880,7 @@ function toFiles(st,lib){
   files.push({name:'README.md',text:[
     '# '+(st.title||'Untitled'),'','Written with Lantern. This folder is the book.','',
     '- book.html — the readable book: title page, contents, chapters, illustrations. Open it in any browser.',
-    '- book.json — settings, cast, threads, the compressed story so far, the scene slate. The canonical file.',
+    '- book.json — settings, story arc, cast, relationships, scene ledger, compressed scene memory, threads and story summary. The canonical file.',
     '- chapters/NN-title.json — one per chapter, prose and illustration. These are what get read back.',
     '- chapters/NN-title.md — the same prose, for reading anywhere.',
     '- illustrations/NN-title.svg — the illustrations on their own.',
@@ -885,7 +908,7 @@ function fromFiles(rawMap){
   if(!book){
     for(const k of Object.keys(map)){
       if(!/\.json$/i.test(k)||/chapters\//i.test(k)||/library\.json$/i.test(k))continue;
-      try{const o=JSON.parse(map[k]);if(o&&o.v==='lantern_1'){book=o;notes.push('rebuilt from '+k);break;}}catch(e){}}}
+      try{const o=JSON.parse(map[k]);if(o&&/^lantern_[12]$/.test(o.v)){book=o;notes.push('rebuilt from '+k);break;}}catch(e){}}}
   const lj=get('library.json');
   if(lj){try{library=JSON.parse(lj);}catch(e){notes.push('library.json did not parse');}}
   if(!book)return {state:null,library,notes};
@@ -905,23 +928,29 @@ function fromFiles(rawMap){
     book.chapters=dedup;notes.push(dedup.length+' chapter files read');
   }else if(!Array.isArray(book.chapters))book.chapters=[];
   else if(book.chapters.length)notes.push('no chapter files; used the copy inside book.json');
-  const state=Object.assign(JSON.parse(JSON.stringify(BLANK)),book);
+  const state=Object.assign(JSON.parse(JSON.stringify(BLANK)),book);state.v='lantern_2';
   state.chapters=(state.chapters||[]).map(c=>({
     n:num(c.n,0),title:String(c.title||''),prose:String(c.prose||''),
     svg:String(c.svg||''),cap:String(c.cap||''),
     words:num(c.words,words(c.prose)),at:String(c.at||''),orderOK:!!c.orderOK}));
+  state.architectureReady=!!state.architectureReady||state.chapters.length>0;
+  if(!Array.isArray(state.scenePlan)||!state.scenePlan.length)state.scenePlan=normalizeScenePlan(state.scenes||[]);
+  state.scenePlan=normalizeScenePlan(state.scenePlan);state.relationships=Array.isArray(state.relationships)?state.relationships:[];
   state.cur=Math.max(-1,Math.min(num(state.cur,-1),state.chapters.length-1));
   return {state,library,notes};}
 
 function applyState(o){
   if(!o||typeof o!=='object')return false;
-  const s=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);
+  const s=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);s.v='lantern_2';
   s.chapters=(Array.isArray(s.chapters)?s.chapters:[]).map(c=>({
     n:num(c.n,0),title:String(c.title||''),prose:String(c.prose||''),
     svg:safeSVG(c.svg),cap:String(c.cap||''),
     words:num(c.words,words(c.prose)),at:String(c.at||''),orderOK:!!c.orderOK}));
   s.cast=Array.isArray(s.cast)?s.cast:[];
   s.scenes=Array.isArray(s.scenes)?s.scenes:[];
+  s.scenePlan=normalizeScenePlan(Array.isArray(s.scenePlan)&&s.scenePlan.length?s.scenePlan:s.scenes);
+  s.relationships=Array.isArray(s.relationships)?s.relationships:[];s.architectureReady=!!s.architectureReady||s.chapters.length>0;
+  s.scenes=s.scenePlan.filter(x=>!['done','closed','foreclosed'].includes(String(x.status).toLowerCase()));
   s.sceneLog=Array.isArray(s.sceneLog)?s.sceneLog:[];
   s.cur=Math.max(-1,Math.min(num(s.cur,-1),s.chapters.length-1));
   S=s;invalidate();$('#msg').innerHTML='';save();renderAll();
@@ -1071,127 +1100,125 @@ function readerText(){return S.readers.map(k=>{
   const own=(S.ownReaders||[]).find(x=>x.k===k);
   return own?`${own.t}: ${own.d}`:k;}).join('\n  · ');}
 
+function cleanSceneStub(x,i){
+  x=x||{};
+  return {id:String(x.id||('s'+String(i+1).padStart(2,'0'))),order:num(x.order,i+1),title:String(x.title||('Scene '+(i+1))),
+    beat:String(x.beat||''),characters:Array.isArray(x.characters)?x.characters.map(String):[],purpose:String(x.purpose||x.advances||''),
+    pays_off:String(x.pays_off||''),depends_on:Array.isArray(x.depends_on)?x.depends_on.map(String):[],
+    status:String(x.status||'planned'),summary:String(x.summary||'')};}
+function normalizeScenePlan(list){return (Array.isArray(list)?list:[]).map(cleanSceneStub).sort((a,b)=>num(a.order,0)-num(b.order,0));}
+function refreshScenesFromPlan(){
+  S.scenePlan=normalizeScenePlan(S.scenePlan);
+  S.scenes=S.scenePlan.filter(x=>!['done','closed','foreclosed'].includes(String(x.status).toLowerCase()));
+}
+function sceneLedgerForPrompt(){
+  return normalizeScenePlan(S.scenePlan).map(x=>x.status==='done'
+    ?{id:x.id,order:x.order,title:x.title,status:'done',summary:x.summary||x.beat}
+    :{id:x.id,order:x.order,title:x.title,status:x.status||'planned',beat:x.beat,characters:x.characters,purpose:x.purpose,pays_off:x.pays_off,depends_on:x.depends_on});}
+function recentSceneSample(){
+  if(!num(S.cfull,1))return '';
+  const c=(S.chapters||[])[S.chapters.length-1];if(!c)return '';
+  const p=String(c.prose||'').trim();if(!p)return '';
+  return p.length<=1100?p:p.slice(Math.max(0,p.length-1100));}
+function mergeRelationships(base,updates){
+  const out=Array.isArray(base)?base.map(x=>Object.assign({},x)):[];
+  (Array.isArray(updates)?updates:[]).forEach(u=>{
+    if(!u)return;const a=String(u.a||u.from||''),b=String(u.b||u.to||'');
+    const i=out.findIndex(x=>{const xa=String(x.a||x.from||''),xb=String(x.b||x.to||'');return (xa===a&&xb===b)||(xa===b&&xb===a);});
+    if(i>=0)out[i]=Object.assign({},out[i],u);else out.push(Object.assign({},u));});
+  return out;}
+
+
 function build(){
   readUI();
-  const n=S.chapters.length+1, first=n===1;
-  const bible={
-    ending:S.ending, plan:S.plan, threads:S.threads,
-    sofar:S.sofar, planted:S.planted||[],
-    slate:S.scenes||[], slate_taken:S.sceneLog||[], chosen:S.sceneChosen||null,
-    recent:S.chapters.slice(-Math.max(0,S.cfull)).map(c=>({n:c.n,title:c.title,prose:c.prose}))
-  };
+  const architecture=!S.architectureReady;
+  const n=S.chapters.length+1;
   const P=[];
-  P.push(`STORYBOOK ENGINE — ${S.title||'untitled'}. You are writing chapter ${n} of a planned ${S.planN}.`);
-  P.push('');
-  P.push('════ THE STORY ════');
-  P.push(S.premise||'(no premise given — invent one consistent with the cast below)');
-  if(S.world.trim()){P.push('');P.push('WORLD AND TEXTURE');P.push(S.world.trim());}
-  P.push('');
-  P.push('CAST');
-  S.cast.filter(c=>c.name||c.role).forEach(c=>{
-    P.push(`  · ${c.name||'(unnamed)'} — ${c.role||'role unstated'}`);
-    if(c.want)P.push(`      wants: ${c.want}`);
-    if(c.refuse)P.push(`      will not: ${c.refuse}`);
-    if(c.voice)P.push(`      speaks: ${c.voice}`);});
-  P.push('');
-  if(!first){
-    P.push('════ SEALED CONTINUITY ════');
-    P.push('Base64. Decode it before you plan — it holds the story so far, the open threads, the guns already planted, the slate of scenes you last offered, and where this is going. It is sealed against the author reading their own save file, not against you. Read it, use it, and never let its contents surface as narration.');
-    P.push('');
-    P.push(b64(JSON.stringify(bible)));
-    P.push('');
-  } else if(S.ending.trim()){
-    P.push('════ SEALED DESTINATION ════');
-    P.push('Base64. Decode it. It is where this ends. Plan toward it. Do not reveal it, foreshadow it heavily, or let a character speak it aloud.');
-    P.push('');
-    P.push(b64(JSON.stringify({ending:S.ending})));
-    P.push('');
+  if(architecture){
+    const seedCast=S.cast.filter(c=>c.name||c.role);
+    P.push(`STORYBOOK ENGINE — ${S.title||'untitled'}. FIRST PASS: STORY ARCHITECTURE ONLY. Do not write chapter prose.`);
+    P.push('');P.push('════ PREMISE ════');P.push(S.premise||'(no premise given — invent a concrete one)');
+    if(S.world.trim()){P.push('');P.push('WORLD AND TEXTURE');P.push(S.world.trim());}
+    if(seedCast.length){P.push('');P.push('AUTHOR-SEED CAST — preserve these people and build around them.');seedCast.forEach(c=>P.push('  · '+JSON.stringify(c)));}
+    if(S.ending.trim()){P.push('');P.push('SEALED DESTINATION — Base64. Decode it; architect toward it without exposing it in any reader-facing field.');P.push(b64(JSON.stringify({ending:S.ending})));}
+    P.push('');P.push('════ PASS ONE · STORY ARC ════');
+    P.push(`Design the complete causal arc for a planned ${S.planN}-chapter story before prose exists. Establish beginning pressure, escalation, midpoint change, crisis, climax, and resolution. The arc must describe irreversible changes, not chapter summaries.`);
+    P.push('');P.push('════ PASS TWO · CHARACTERS AND RELATIONSHIPS ════');
+    P.push('Create the principal cast required by that arc. For each character state role, want, refusal/line they will not cross, and speaking texture. Then build the relationship graph: who each pair is to one another, what each gets wrong about the other, the present tension, and how that relationship is expected to change across the arc. Relationships are plot-bearing state, not biography.');
+    P.push('');P.push('════ PASS THREE · SCENE STUBS ════');
+    const want=Math.max(S.sceneN,S.planN);
+    P.push(`Build at least ${want} ordered scene stubs that realize the arc. These exist BEFORE chapter 1. Each stub is a concrete scene: place/person/action, no prose, usually no more than ${S.sceneW} words in "beat".`);
+    P.push('Give every scene a stable id, order, characters present, purpose, what later beat it pays off, prerequisites by scene id, and status "planned". The first few scenes must be genuinely writable next; do not make the opening wait for exposition.');
+    P.push('The map is a scaffold, not a prison: later writing passes may revise future stubs when causality earns it, but they must preserve stable ids whenever the scene is still recognizably the same scene.');
+    P.push('');P.push('════ THREADS ════');P.push('List the initial unresolved obligations/questions the scene map is designed to move.');
+    P.push('');P.push('════ OUTPUT ════');P.push('One JSON object only. No chapter prose.');P.push(JSON.stringify(schema(0,'architecture'),null,2));
+  }else{
+    const bible={ending:S.ending,story_arc:S.storyArc,relationships:S.relationships,threads:S.threads,sofar:S.sofar,
+      planted:S.planted||[],scene_memory:S.sceneMemory,scene_ledger:sceneLedgerForPrompt(),scene_taken:S.sceneLog||[],chosen:S.sceneChosen||null,
+      recent_chapters:S.chapters.slice(-3).map(c=>({n:c.n,title:c.title,sceneId:c.sceneId||'',sceneTitle:c.sceneTitle||''}))};
+    P.push(`STORYBOOK ENGINE — ${S.title||'untitled'}. You are writing chapter ${n} of a planned ${S.planN}. The story architecture already exists.`);
+    P.push('');P.push('════ THE STORY ════');P.push(S.premise||'(premise omitted)');
+    if(S.world.trim()){P.push('');P.push('WORLD AND TEXTURE');P.push(S.world.trim());}
+    P.push('');P.push('════ SEALED CONTINUITY ════');
+    P.push('Base64. Decode it before choosing a scene. It contains the persistent story arc, current relationship graph, causal story summary, open threads, completed-scene memory, the entire compact scene ledger, author override if any, and recent chapter/scene identifiers. A bounded recent prose sample, if enabled, is supplied separately. Use it. Never leak sealed planning facts into narration merely because you know them.');
+    P.push('');P.push(b64(JSON.stringify(bible)));P.push('');
+    P.push('════ PASS ONE · CHOOSE THE VERY NEXT SCENE ════');
+    if(S.sceneChosen){
+      P.push('The author has overridden the ledger. Use this scene as the primary scene of the chapter: '+JSON.stringify(S.sceneChosen));
+    }else{
+      P.push('Choose one unfinished scene from the ledger BEFORE you plan prose. Prefer the earliest viable scene whose prerequisites are satisfied and whose causal pressure follows directly from the last completed scene. Do NOT jump to a later dramatic scene merely because it is more exciting. If two scenes are viable, choose the one that makes the next scene after it easier to earn.');
+    }
+    P.push('Emit "scene_choice" first with the stable scene id, title, and a one-line reason it is the correct immediate successor.');
+    P.push('');P.push('════ PASS TWO · PLAN ════');
+    P.push('Before prose, emit the chapter plan: two or three beats, what the reader learns, what remains withheld, and one concrete plant. The chosen scene is the spine of the chapter. Tiny connective material is allowed; substituting a different main scene is not.');
+    P.push('');P.push('════ PASS THREE · WRITE ════');
+    P.push(`  · Length: about ${S.wpc} words. Voice: ${S.pov}.`);
+    if(S.styles.length)P.push(`  · Write in the manner of — ${styleText()}. Take the technique, not surface tics, and never reproduce actual sentences.`);
+    P.push(`  · Restraint level ${S.restraint} of 4: ${RESTRAINT[S.restraint]}.`);
+    P.push('  · Enter the chosen scene late and leave it early. No recap of what the reader just read. Emotion should usually be carried by behavior, omission, object, timing, or choice rather than explanation.');
+    if(S.exemplar.trim()){P.push('');P.push('VOICE EXEMPLAR — match cadence, sentence length, diction and rhythm. Do not borrow content, imagery or phrasing.');P.push('---');P.push(S.exemplar.trim().slice(0,2600));P.push('---');}
+    if(S.ban.trim())P.push(`  · Banned: ${S.ban.trim()}`);
+    const sample=recentSceneSample();
+    P.push('');P.push('════ SCENE CONTINUITY — ALWAYS PRESENT ════');
+    P.push(`Rewrite completed-scene memory after this chapter in at most ${S.sceneHistoryBudget} words. It is scene-shaped memory: what physically happened, who was present, what changed between people, what object/information moved, and what immediate pressure now exists. Do not duplicate the general story summary.`);
+    if(sample){P.push('');P.push('RECENT PROSE SAMPLE — continuity of texture only; do not repeat it.');P.push('---');P.push(sample);P.push('---');}
+    P.push('');P.push('After writing, update the scene ledger. Mark the chosen stable id "done" and give it a compact factual summary. Preserve future stubs unless the written scene actually changes causality; if it does, revise only what is necessary. You may add a newly earned future stub, but do not endlessly proliferate options.');
+    P.push('');P.push('════ THE READER ════');P.push('  · '+(readerText()||'a general adult reader'));
+    P.push('Report what this reader now believes, the question they carry forward, and the likeliest paragraph to lose them.');
+    if(S.illus!=='none'){P.push('');P.push('════ ILLUSTRATION ════');P.push(`Provide ${S.illus==='each'?'one illustration':'an illustration only if earned'}, raw inline SVG on viewBox 0 0 800 480. No text, external references, raster, scripts, or spoiler.`);}
+    P.push('');P.push('════ COMPRESSION ════');
+    P.push(`Rewrite the ENTIRE story so far in at most ${S.cbudget} words, including this chapter. Keep causal chain, character positions, obligations and consequential facts; drop decorative prose. Rewrite, never append.`);
+    if(S.steer.trim()){P.push('');P.push('════ THE AUTHOR ASKS ════');P.push(S.steer.trim());}
+    P.push('');P.push('════ TEST BEFORE YOU SEND ════');P.push('Return one valid JSON object. Test it with JSON.parse/json.loads if you can. Paragraph breaks inside strings are \\n\\n. No trailing commas, raw line breaks inside strings, truncated SVG, or commentary around the object.');
+    P.push('');P.push('════ OUTPUT ════');P.push('One JSON object, scene_choice first, plan second, prose third.');P.push(JSON.stringify(schema(n,'chapter'),null,2));
   }
-  const sc=S.sceneChosen;
-  if(sc&&(String(sc.title||'').trim()||String(sc.beat||'').trim())){
-    P.push('════ THE SCENE THE AUTHOR PICKED ════');
-    P.push('Taken from the slate. This chapter delivers it. Reshape the wording as the story needs, but do not substitute a different scene and do not spend the chapter getting to it — enter it late.');
-    P.push('  · '+[String(sc.title||'').trim(),String(sc.beat||'').trim()].filter(Boolean).join(' — '));
-    if(String(sc.advances||'').trim())P.push('    it moves: '+sc.advances.trim());
-    if(String(sc.cost||'').trim())P.push('    it costs: '+sc.cost.trim());
-    P.push('');
-  }
-  P.push('════ PASS ONE · PLAN ════');
-  P.push('Before you write a word of prose, emit the plan. It goes first in the JSON so the order is checkable — a plan written after the prose is not a plan, it is a description.');
-  P.push('State: the two or three beats this chapter must land; exactly what the reader learns here; exactly what you are withholding and why it survives another chapter; and one concrete thing planted now that pays off later.');
-  P.push('');
-  P.push('════ PASS TWO · WRITE ════');
-  P.push(`  · Length: about ${S.wpc} words. Voice: ${S.pov}.`);
-  if(S.styles.length)P.push(`  · Write in the manner of — ${styleText()}. Take the technique, not the surface tics, and never reproduce any of their actual sentences.`);
-  P.push(`  · Restraint level ${S.restraint} of 4: ${RESTRAINT[S.restraint]}.`);
-  P.push('  · Be subtle. Emotion is carried by what a character does with their hands, what they choose not to answer, and which object they keep touching. Do not name the feeling and then also demonstrate it — pick one, and it should be the demonstration. Cut any sentence that explains the sentence before it.');
-  P.push('  · No summary of what the reader just read. No dream that resolves anything. No weather standing in for mood. Enter scenes late and leave them early.');
-  if(S.exemplar.trim()){P.push('');P.push('VOICE EXEMPLAR — match cadence, sentence length, diction and rhythm. Do not borrow its content, imagery or phrasing.');
-    P.push('---');P.push(S.exemplar.trim().slice(0,2600));P.push('---');}
-  if(S.ban.trim())P.push(`  · Banned: ${S.ban.trim()}`);
-  P.push('');
-  P.push('════ THE READER ════');
-  P.push('Hold this person in mind. Write for them specifically.');
-  P.push('  · '+(readerText()||'a general adult reader'));
-  P.push('At the end you must report, honestly: what this reader now believes (including anything they now believe that is wrong), the question they are carrying into the next chapter, and the most likely paragraph at which they would put the book down. If you cannot name a plausible place they would stop, you have not looked hard enough — name your weakest paragraph.');
-  P.push('');
-  if(S.illus!=='none'){
-    P.push('════ ILLUSTRATION ════');
-    P.push(`Provide ${S.illus==='each'?'one illustration for this chapter':'an illustration only if this chapter genuinely has an image worth making'}, as raw inline SVG on a 0 0 800 480 viewBox.`);
-    P.push('Constraints: no text elements, no external references, no raster images, no scripts. Flat shapes, limited palette, strong silhouette — a woodcut or a lantern slide, not a rendering. It should show a moment or an object from the chapter, never a spoiler. Keep it under about 8000 characters.');
-    P.push('');
-  }
-  P.push('════ THE NEXT-SCENE SLATE ════');
-  P.push(`Put ${S.sceneN} scenes on the table for the chapter after this one. This is a slate for the author to choose from, not a plan you have already settled: offer real alternatives, and do not signal a favourite.`);
-  P.push(`Each option is at most ${S.sceneW} words of beat, and each states plainly which open thread it moves and what it spends, forecloses or risks.`);
-  P.push('Rules for the slate: a scene, not a summary — a place, a person, a thing that happens. They must differ in kind, not in flavour; three versions of the same move is one option. At least one must cost the protagonist something they are currently holding onto. At least one must be small, quiet and near at hand. None may require the reader to already know something you are still withholding, and none may be the scene you have just written.');
-  P.push('');
-  P.push('════ COMPRESSION ════');
-  P.push(`Rewrite the ENTIRE story so far in at most ${S.cbudget} words, including this new chapter. Rewrite it — do not append to the previous summary. Keep what a continuation needs: causal chain, character positions, unresolved obligations, tone. Drop what it does not: pretty lines, atmosphere, anything decorative. This budget does not grow as the book does.`);
-  P.push(`The slate is compressed on the same terms: ${S.sceneN} options, no more, each inside ${S.sceneW} words, rewritten from what the story is now. Drop what this chapter spent, foreclosed or made obvious rather than carrying it forward, and do not re-offer a scene the author has already taken. Neither budget grows as the book does.`);
-  P.push('');
-  if(S.steer.trim()){P.push('════ THE AUTHOR ASKS ════');P.push(S.steer.trim());P.push('');}
-  P.push('════ TEST BEFORE YOU SEND ════');
-  P.push('This reply is read by a parser, not a person. If it does not parse it is rejected whole and the chapter is lost with it, so the last thing you do before answering is test it.');
-  P.push('  · If you can run code, parse your own output with a real JSON parser — JSON.parse or json.loads — and repair it until it parses. Test, then send. Not the other way round.');
-  P.push('  · If you cannot run code, walk the finished object against the list below, item by item.');
-  P.push('Each of these has killed a chapter before now:');
-  P.push('  · A real line break inside a string. Paragraph breaks in "prose" are the two characters \\n\\n, never an actual newline.');
-  P.push('  · A trailing comma before } or ].');
-  P.push('  · Curly quotes doing the job of JSON delimiters. Delimiters are straight ". Curly quotes inside the prose are welcome and should stay.');
-  P.push('  · An unescaped straight quote inside a string — in dialogue, and above all in the SVG, where every attribute quote must be written \\".');
-  P.push('  · A backslash that is not part of a valid escape.');
-  P.push('  · An SVG cut off before its closing tag. If it will not fit the budget, draw something simpler. Never send a fragment.');
-  P.push('  · Two objects in one reply, or commentary sitting between the fences and the object.');
-  P.push('If a value is awkward to escape, rewrite the value. Do not ship something that will not parse.');
-  P.push('');
-  P.push('════ OUTPUT ════');
-  P.push('One JSON object, plan first, prose second. Nothing outside it, except — if you have actually run the parse — a final line reading PARSE: OK.');
-  P.push(JSON.stringify(schema(n),null,2));
-  S.prompt=P.join('\n');
-  $('#prompt').textContent=S.prompt;
-  const sealed=first&&!S.ending.trim()?'Nothing sealed for chapter one.':b64(JSON.stringify(bible));
-  const box=$('#sealbox');
-  box.dataset.sealed=sealed;
-  box.dataset.plain=JSON.stringify(bible,null,1);
-  box.textContent=sealed;
-  box.classList.remove('open');$('#unseal').textContent='Break seal';
-  save();toast('Prompt built for chapter '+n);
+  S.prompt=P.join('\n');$('#prompt').textContent=S.prompt;
+  const box=$('#sealbox');const sealObj=architecture?{ending:S.ending}:{story_arc:S.storyArc,relationships:S.relationships,scene_memory:S.sceneMemory,scene_ledger:sceneLedgerForPrompt(),ending:S.ending};
+  const sealed=Object.values(sealObj).some(v=>Array.isArray(v)?v.length:!!v)?b64(JSON.stringify(sealObj)):'Nothing sealed yet.';
+  box.dataset.sealed=sealed;box.dataset.plain=JSON.stringify(sealObj,null,1);box.textContent=sealed;box.classList.remove('open');$('#unseal').textContent='Break seal';
+  save();toast(architecture?'Story architecture prompt built':'Prompt built for chapter '+n);
 }
-function schema(n){return{
-  plan:{beats:['what must land in this chapter'],reveals:['what the reader learns here'],
-    withheld:['what is being kept back, and why it survives another chapter'],
-    planted:'one concrete thing placed now that pays off later'},
-  chapter:{number:n,title:'chapter title',prose:'The full chapter. Use \\n\\n between paragraphs. No markdown headings.'},
-  illustration:{caption:'one short line',svg:'<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">…</svg>'},
-  reader_check:{reader:'which reader you wrote for',now_believes:'what they hold to be true, including what they wrongly believe',
-    carrying:'the question they take into the next chapter',would_stop_at:'the paragraph most likely to lose them, and why'},
-  story_so_far:'the ENTIRE story rewritten within the word budget',
-  threads:[{thread:'an unresolved obligation',status:'open | advanced | closed',note:'one line'}],
-  scene_options:[{title:'short name for the scene',beat:'what happens, inside the word budget',
-    advances:'which open thread it moves, and how far',cost:'what it spends, forecloses or risks'}],
-  bible_update:{ending_still:'restate where this is heading, in one line',
-    guns:['things planted and not yet fired']}};}
+function schema(n,phase){
+  if(phase==='architecture')return{
+    story_arc:{opening_pressure:'what destabilizes ordinary life',escalation:['irreversible turn 1','irreversible turn 2'],midpoint:'what changes the meaning of the problem',crisis:'the costly narrowing of choices',climax:'the decisive collision',resolution:'what is different afterward'},
+    cast:[{name:'name',role:'story role',want:'what they pursue',refuse:'line they will not cross',voice:'how they speak'}],
+    relationships:[{a:'character A',b:'character B',relation:'what they are to one another',misread:'what one or both get wrong',tension:'current live tension',trajectory:'how this relationship is expected to change'}],
+    scene_stubs:[{id:'s01',order:1,title:'short scene name',beat:'concrete place/person/action',characters:['name'],purpose:'what causal work this scene does',pays_off:'later beat it prepares',depends_on:[],status:'planned'}],
+    threads:[{thread:'an unresolved obligation/question',status:'open',note:'one line'}],
+    bible_update:{ending_still:'where this is heading in one line',guns:['things deliberately planted for later']}};
+  return{
+    scene_choice:{id:'stable id from scene ledger',title:'chosen scene',reason:'why this is the immediate next scene'},
+    plan:{beats:['what must land'],reveals:['what the reader learns'],withheld:['what stays back and why'],planted:'one concrete thing placed now'},
+    chapter:{number:n,title:'chapter title',prose:'The full chapter. Use \\n\\n between paragraphs. No markdown headings.'},
+    scene_completed:{id:'same stable scene id',title:'scene title',summary:'compact factual summary of what physically happened and changed'},
+    scene_memory:'ALL completed scenes rewritten as bounded scene-shaped memory',
+    scene_plan:[{id:'stable id',order:1,title:'scene title',beat:'compact beat if unfinished',characters:['name'],purpose:'causal work',pays_off:'later beat',depends_on:[],status:'planned | done | foreclosed',summary:'required when done'}],
+    relationships:[{a:'character A',b:'character B',relation:'current relation',misread:'current misread',tension:'current tension',trajectory:'current direction'}],
+    illustration:{caption:'one short line',svg:'<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">…</svg>'},
+    reader_check:{reader:'which reader',now_believes:'what they now hold true',carrying:'question carried forward',would_stop_at:'weakest paragraph and why'},
+    story_so_far:'the ENTIRE story rewritten within the word budget',
+    threads:[{thread:'an unresolved obligation',status:'open | advanced | closed',note:'one line'}],
+    bible_update:{ending_still:'where this is heading, one line',guns:['things planted and not yet fired']}};}
 
 /* ═══════ test, then record ═══════ */
 let verified=null;   /* {raw, obj, fixes} — the only door into the book */
@@ -1218,22 +1245,27 @@ function testPaste(quiet){
       '<div class="msg">Paste the location above back to the model and ask it to re-emit the object, validated.</div>';
     if(!quiet)toast('Still broken — see the line and column');
     return false;}
-  const c=checkReply(r.obj,S.cbudget,S.illus!=='none',{n:S.sceneN,w:S.sceneW});
+  const phase=S.architectureReady?'chapter':'architecture';
+  const c=checkReply(r.obj,S.cbudget,S.illus!=='none',{n:phase==='architecture'?Math.max(S.sceneN,S.planN):S.sceneN,w:S.sceneW,histBudget:S.sceneHistoryBudget,plan:S.scenePlan,allowedChosenId:(S.sceneChosen||{}).id||''},phase);
   const ch=r.obj.chapter||{};
-  const iP=r.text.indexOf('"plan"'), iC=r.text.indexOf('"chapter"');
-  const orderOK=iP>=0&&(iC<0||iP<iC);
-  const facts=[/PARSE:\s*OK/i.test(raw)?'parses as JSON, and the model says it checked':'parses as JSON',
-    words(ch.prose)+' words of prose in '+String(ch.prose||'').split(/\n{2,}/).filter(Boolean).length+' paragraphs',
-    orderOK?'plan came before the prose':'plan was written after the prose',
-    r.obj.story_so_far?words(r.obj.story_so_far)+'-word summary against a '+S.cbudget+' budget':'no summary',
-    (r.obj.threads||[]).length+' threads',
-    (r.obj.scene_options||[]).length+' scenes offered for next time',
-    (r.obj.illustration||{}).svg?String(r.obj.illustration.svg).length+'-character SVG':'no SVG'];
+  const iS=r.text.indexOf('\"scene_choice\"'), iP=r.text.indexOf('\"plan\"'), iC=r.text.indexOf('\"chapter\"');
+  const orderOK=phase==='architecture'?true:(iS>=0&&iP>=0&&iC>=0&&iS<iP&&iP<iC);
+  const facts=phase==='architecture'
+    ?[/PARSE:\s*OK/i.test(raw)?'parses as JSON, and the model says it checked':'parses as JSON',
+      (r.obj.cast||[]).length+' characters', (r.obj.relationships||[]).length+' relationships',
+      (r.obj.scene_stubs||[]).length+' scene stubs built before prose', (r.obj.threads||[]).length+' initial threads']
+    :[/PARSE:\s*OK/i.test(raw)?'parses as JSON, and the model says it checked':'parses as JSON',
+      words(ch.prose)+' words of prose in '+String(ch.prose||'').split(/\n{2,}/).filter(Boolean).length+' paragraphs',
+      orderOK?'scene choice → plan → prose':'scene choice / plan / prose order is wrong',
+      r.obj.story_so_far?words(r.obj.story_so_far)+'-word summary against a '+S.cbudget+' budget':'no summary',
+      r.obj.scene_memory?words(r.obj.scene_memory)+'-word completed-scene memory':'no scene memory',
+      (r.obj.scene_plan||[]).length+' scenes in returned ledger',
+      (r.obj.illustration||{}).svg?String(r.obj.illustration.svg).length+'-character SVG':'no SVG'];
   if(c.fail.length){
     verified=null;setGate('no','failed the checks');
-    m.innerHTML='<div class="msg no"><b>Parses, but it is not a chapter.</b><ul>'+
+    m.innerHTML='<div class="msg no"><b>'+esc(phase==='architecture'?'Parses, but the story map is incomplete.':'Parses, but it is not a complete scene-driven chapter.')+'</b><ul>'+
       c.fail.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>';
-    if(!quiet)toast('Parsed, but incomplete');
+    if(!quiet)toast(phase==='architecture'?'Parsed, but the story map is incomplete':'Parsed, but the chapter is incomplete');
     return false;}
   verified={raw,obj:r.obj,fixes:r.fixes,orderOK};
   setGate('ok','tested — ready');
@@ -1241,38 +1273,45 @@ function testPaste(quiet){
     facts.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>'+
     (r.fixes.length?'<div class="msg"><b>Repaired on the way in</b><ul>'+r.fixes.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'')+
     (c.warn.length?'<div class="msg"><b>Worth a look</b><ul>'+c.warn.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'');
-  if(!quiet)toast('Parses. '+words(ch.prose)+' words.');
+  if(!quiet)toast(phase==='architecture'?'Story map parses: '+(r.obj.scene_stubs||[]).length+' scene stubs':'Parses. '+words(ch.prose)+' words.');
   return true;}
 
 function record(){
   const raw=$('#paste').value;
-  if(!verified||verified.raw!==raw){ if(!testPaste(true)) {toast('Not recorded — it has to pass the test first');return;} }
-  const o=verified.obj, ch=o.chapter||{};
-  const prose=String(ch.prose||'').trim();
-  const n=num(ch.number,S.chapters.length+1);
-  const rec={n,title:String(ch.title||('Chapter '+n)).slice(0,140),prose,
-    svg:safeSVG((o.illustration||{}).svg),cap:String((o.illustration||{}).caption||'').slice(0,180),
-    words:words(prose),at:new Date().toISOString(),orderOK:verified.orderOK};
-  S.chapters.push(rec);
-  S.sofar=String(o.story_so_far||S.sofar).trim();
-  S.plan=JSON.stringify(o.plan||{},null,1);
-  S.threads=Array.isArray(o.threads)?o.threads:S.threads;
-  S.rcheck=o.reader_check||null;
-  S.planted=((o.bible_update||{}).guns)||S.planted||[];
-  if(Array.isArray(o.scene_options))S.scenes=o.scene_options.filter(x=>x&&(x.title||x.beat)).slice(0,8);
-  if(S.sceneChosen)S.sceneLog=(S.sceneLog||[]).concat([{n,title:String(S.sceneChosen.title||'(the author’s own)')}]);
-  S.sceneChosen=null;
-  if((o.bible_update||{}).ending_still)S.ending=S.ending||String(o.bible_update.ending_still);
-  S.cur=S.chapters.length-1; S.steer=''; $('#steer').value=''; $('#paste').value='';
-  invalidate();
-  save();renderAll();
-  if(L.mirror&&dirHandle)saveFolder(true);
-  const flags=[!rec.orderOK?'the plan was written after the prose':'',
-    words(S.sofar)>S.cbudget*1.3?'the summary ran to '+words(S.sofar)+' words against a '+S.cbudget+' budget':'',
-    (S.illus!=='none'&&!rec.svg)?'no usable illustration came back':'',
-    !(S.scenes||[]).length?'no scene slate came back':''].filter(Boolean);
-  $('#msg').innerHTML='<div class="msg ok"><b>Chapter '+n+' recorded — '+rec.words+' words.</b>'+
-    (flags.length?'Flags: '+esc(flags.join('; '))+'.':'Plan came first, summary within budget, slate on the table.')+'</div>';
+  if(!verified||verified.raw!==raw){if(!testPaste(true)){toast('Not recorded — it has to pass the test first');return;}}
+  const o=verified.obj;
+  if(!S.architectureReady){
+    S.storyArc=o.story_arc||null;
+    if(Array.isArray(o.cast)&&o.cast.length)S.cast=o.cast.map(c=>({name:String(c.name||''),role:String(c.role||''),want:String(c.want||''),refuse:String(c.refuse||''),voice:String(c.voice||'')}));
+    S.relationships=Array.isArray(o.relationships)?o.relationships:[];
+    S.scenePlan=normalizeScenePlan(o.scene_stubs||[]);refreshScenesFromPlan();
+    S.threads=Array.isArray(o.threads)?o.threads:[];S.planted=((o.bible_update||{}).guns)||[];
+    if((o.bible_update||{}).ending_still)S.ending=S.ending||String(o.bible_update.ending_still);
+    S.architectureReady=true;S.plan=JSON.stringify(o.story_arc||{},null,1);S.prompt='';S.sceneChosen=null;S.sceneMemory='';S.sceneLog=[];
+    $('#paste').value='';invalidate();save();renderAll();if(L.mirror&&dirHandle)saveFolder(true);
+    $('#msg').innerHTML='<div class="msg ok"><b>Story architecture recorded.</b>'+S.cast.length+' characters · '+S.relationships.length+' relationships · '+S.scenePlan.length+' scene stubs. Chapter 1 will now choose the best immediate next scene.</div>';
+    toast('Story map recorded — ready for chapter 1');return;
+  }
+  const ch=o.chapter||{},prose=String(ch.prose||'').trim(),n=num(ch.number,S.chapters.length+1);
+  const choice=o.scene_choice||{},done=o.scene_completed||{};
+  const rec={n,title:String(ch.title||('Chapter '+n)).slice(0,140),prose,svg:safeSVG((o.illustration||{}).svg),cap:String((o.illustration||{}).caption||'').slice(0,180),
+    words:words(prose),at:new Date().toISOString(),orderOK:verified.orderOK,sceneId:String(done.id||choice.id||''),sceneTitle:String(done.title||choice.title||'')};
+  S.chapters.push(rec);S.sofar=String(o.story_so_far||S.sofar).trim();S.plan=JSON.stringify(o.plan||{},null,1);S.threads=Array.isArray(o.threads)?o.threads:S.threads;
+  S.rcheck=o.reader_check||null;S.planted=((o.bible_update||{}).guns)||S.planted||[];S.sceneMemory=String(o.scene_memory||S.sceneMemory||'').trim();
+  if(Array.isArray(o.relationships)&&o.relationships.length)S.relationships=o.relationships;
+  const chosenId=String(done.id||choice.id||'');
+  if(Array.isArray(o.scene_plan)&&o.scene_plan.length)S.scenePlan=normalizeScenePlan(o.scene_plan);
+  else{
+    S.scenePlan=normalizeScenePlan(S.scenePlan);const x=S.scenePlan.find(z=>z.id===chosenId);
+    if(x){x.status='done';x.summary=String(done.summary||x.summary||x.beat);}
+  }
+  if(chosenId&&!S.scenePlan.some(x=>x.id===chosenId))S.scenePlan.push(cleanSceneStub({id:chosenId,order:S.scenePlan.length+1,title:done.title||choice.title,beat:'',status:'done',summary:done.summary||''},S.scenePlan.length));
+  refreshScenesFromPlan();
+  S.sceneLog=(S.sceneLog||[]).concat([{n,id:chosenId,title:String(done.title||choice.title||S.sceneChosen?.title||'scene'),summary:String(done.summary||'')}]);
+  S.sceneChosen=null;if((o.bible_update||{}).ending_still)S.ending=S.ending||String(o.bible_update.ending_still);
+  S.cur=S.chapters.length-1;S.steer='';$('#steer').value='';$('#paste').value='';invalidate();save();renderAll();if(L.mirror&&dirHandle)saveFolder(true);
+  const flags=[!rec.orderOK?'scene choice / plan / prose order was wrong':'',words(S.sofar)>S.cbudget*1.3?'story summary over budget':'',words(S.sceneMemory)>S.sceneHistoryBudget*1.3?'scene memory over budget':'',(S.illus!=='none'&&!rec.svg)?'no usable illustration':''].filter(Boolean);
+  $('#msg').innerHTML='<div class="msg ok"><b>Chapter '+n+' recorded — '+rec.words+' words.</b>'+(flags.length?' Flags: '+esc(flags.join('; '))+'.':' Scene '+esc(chosenId||'chosen')+' is now marked complete; the next prompt carries the updated ledger and compressed scene memory.')+'</div>';
   toast('Chapter '+n+' recorded');}
 
 /* ═══════ paging ═══════ */
@@ -1303,9 +1342,7 @@ function renderPager(){
 
 /* ═══════ render ═══════ */
 function headLine(){
-  return S.chapters.length
-    ? S.chapters.length+' of '+S.planN+' · '+totalWords().toLocaleString()+' words'
-    : 'no chapters yet';}
+  return S.chapters.length?S.chapters.length+' of '+S.planN+' · '+totalWords().toLocaleString()+' words':(S.architectureReady?'story mapped · no chapters yet':'story not mapped yet');}
 
 function titlePage(){
   const n=S.chapters.length;
@@ -1313,7 +1350,7 @@ function titlePage(){
     (S.author.trim()?'<div class="tp-by">'+esc(S.author.trim())+'</div>':'')+
     '<h3>'+esc(S.title||'Untitled')+'</h3>'+ORN+
     '<div class="prose"><p>'+(esc(S.premise)||
-      'Give it a premise on the Story tab, choose who is reading on the Reader tab, then build a prompt. The first chapter arrives by paste.')+'</p>'+
+      'Give it a premise on the Story tab, then build. The first paste creates the story arc, cast, relationships and scene map; chapter 1 comes on the next pass.')+'</p>'+
     (n?'<p class="tp-meta">'+n+' chapter'+(n===1?'':'s')+' of '+S.planN+' · '+totalWords().toLocaleString()+' words</p>':'')+
     '</div></div>';}
 
@@ -1341,7 +1378,10 @@ function renderTOC(){
       <span class="w">${c.words}w${c.svg?' · ill.':''}</span></div>`));
   $('#toc').innerHTML=rows.length?rows.join(''):'<p class="empty">No chapters yet.</p>';
   $$('#toc .tocrow').forEach(r=>r.onclick=()=>{showRead();goTo(+r.dataset.i);});
-  $('#nexttag').textContent='chapter '+(S.chapters.length+1);
+  $('#nexttag').textContent=S.architectureReady?'chapter '+(S.chapters.length+1):'story pass';
+  $('#buildhead').textContent=S.architectureReady?'1 · Build the next scene':'1 · Build the story';
+  $('#build').textContent=S.architectureReady?'Build next-scene prompt':'Build story architecture';
+  $('#record').textContent=S.architectureReady?'Record chapter':'Record story map';
 }
 function renderCast(){
   $('#castlist').innerHTML=S.cast.map((c,i)=>`
@@ -1401,44 +1441,37 @@ function sceneCard(x,i,chosen,btn){
     ${btn||''}</div>`;}
 
 function renderScenes(){
-  const list=$('#scenelist');if(!list)return;
-  const sc=Array.isArray(S.scenes)?S.scenes:[];
-  const chosen=S.sceneChosen;
-  list.innerHTML=sc.length?sc.map((x,i)=>sceneCard(x,i,chosen&&num(chosen.i,-9)===i,
-    `<div class="row" style="margin-top:12px">
-      <button class="b sm ${chosen&&num(chosen.i,-9)===i?'on':''}" data-sc="${i}">${chosen&&num(chosen.i,-9)===i?'Chosen':'Write this one'}</button>
-      <span class="plate">${words(x.beat)} words · cap ${S.sceneW}</span></div>`)).join('')
-    :'<p class="empty">Nothing on the table yet. Record a chapter and the model will offer a slate for the one after it.</p>';
-  $$('#scenelist [data-sc]').forEach(b=>b.onclick=()=>{
-    const i=+b.dataset.sc, x=sc[i]||{};
-    S.sceneChosen={i,title:String(x.title||''),beat:String(x.beat||''),
-      advances:String(x.advances||''),cost:String(x.cost||'')};
-    save();renderScenes();renderBuildNote();
-    toast('Chapter '+(S.chapters.length+1)+': '+(x.title||'that one'));});
-  $('#scenetag').textContent=sc.length?sc.length+' on the table':'no slate yet';
-  $('#scenechno').textContent=String(S.chapters.length+1);
-  $('#chosentag').textContent=chosen?'set':'nothing';
-  $('#scenechosen').innerHTML=chosen
-    ? sceneCard({title:chosen.title||'the author’s own',beat:chosen.beat,advances:chosen.advances,cost:chosen.cost},0,true,
-        '<div class="row" style="margin-top:12px"><button class="b sm" id="scene-drop">Unchoose</button></div>')+
-      '<p class="note" style="margin-top:12px">This goes into the next prompt as an instruction, not a suggestion. Build the prompt on the Read tab.</p>'
-    : '<p class="empty">Nothing chosen. The model will pick for itself, which it is allowed to do.</p>';
-  const d=$('#scene-drop');
-  if(d)d.onclick=()=>{S.sceneChosen=null;save();renderScenes();renderBuildNote();toast('Unchosen');};
-  $('#scenelog').value=(S.sceneLog||[]).map(x=>String(num(x.n,0)).padStart(2,'0')+' · '+String(x.title||'')).join('\n');
-  const sn=$('#slatenote');
-  if(sn)sn.innerHTML='<b>Scene slate</b>'+S.sceneN+' options, '+S.sceneW+
-    ' words each, rewritten every chapter alongside the summary — on the Scenes tab.';
+  const list=$('#scenelist');if(!list)return;refreshScenesFromPlan();
+  const sc=S.scenePlan||[],chosen=S.sceneChosen;
+  list.innerHTML=sc.length?sc.map((x,i)=>{
+    const done=String(x.status).toLowerCase()==='done';
+    return `<div class="scene ${chosen&&String(chosen.id||'')===x.id?'on':''}" style="opacity:${done?'.66':'1'}">
+      <h4>${esc(x.title||('Scene '+(i+1)))} <span class="plate">${esc(x.id)} · ${esc(x.status||'planned')}</span></h4>
+      <div class="beat">${esc(done?(x.summary||x.beat||'completed'):(x.beat||'—'))}</div>
+      <dl>${x.purpose?`<dt>purpose</dt><dd>${esc(x.purpose)}</dd>`:''}${x.depends_on&&x.depends_on.length?`<dt>after</dt><dd>${esc(x.depends_on.join(', '))}</dd>`:''}${x.characters&&x.characters.length?`<dt>with</dt><dd>${esc(x.characters.join(', '))}</dd>`:''}</dl>
+      ${done?'':`<div class="row" style="margin-top:12px"><button class="b sm ${chosen&&String(chosen.id||'')===x.id?'on':''}" data-sc="${i}">${chosen&&String(chosen.id||'')===x.id?'Override chosen':'Force this scene'}</button></div>`}</div>`;}).join('')
+    :'<p class="empty">No scene ledger yet. Build and record the story architecture first.</p>';
+  $$('#scenelist [data-sc]').forEach(b=>b.onclick=()=>{const i=+b.dataset.sc,x=sc[i]||{};S.sceneChosen={i,id:x.id,title:x.title,beat:x.beat,characters:x.characters,purpose:x.purpose,depends_on:x.depends_on};save();renderScenes();renderBuildNote();toast('Override set: '+(x.title||x.id));});
+  const open=sc.filter(x=>String(x.status).toLowerCase()!=='done');$('#scenetag').textContent=sc.length?(open.length+' unfinished · '+sc.length+' total'):'not built yet';
+  $('#scenechno').textContent=String(S.chapters.length+1);$('#chosentag').textContent=chosen?'override':'model chooses';
+  $('#scenechosen').innerHTML=chosen?sceneCard({title:chosen.title||'author override',beat:chosen.beat,advances:chosen.purpose,cost:''},0,true,'<div class="row" style="margin-top:12px"><button class="b sm" id="scene-drop">Remove override</button></div>')+'<p class="note" style="margin-top:12px">Without an override, the model must choose the earliest causally viable unfinished scene.</p>':'<p class="empty">No override. The model will choose the best very next scene from the persistent ledger.</p>';
+  const d=$('#scene-drop');if(d)d.onclick=()=>{S.sceneChosen=null;save();renderScenes();renderBuildNote();toast('Override removed');};
+  $('#scenelog').value=S.sceneMemory||((S.sceneLog||[]).map(x=>String(num(x.n,0)).padStart(2,'0')+' · '+String(x.id||'')+' · '+String(x.title||'')).join('\n'));
+  const sn=$('#slatenote');if(sn)sn.innerHTML='<b>Scene memory</b> whole compact ledger in every prompt · completed-scene memory '+S.sceneHistoryBudget+' words · recent prose sample included.';
 }
+function renderArchitecture(){
+  const tag=$('#archtag');if(!tag)return;tag.textContent=S.architectureReady?'built':'not built';tag.className='plate'+(S.architectureReady?' ok':'');
+  $('#arcbox').textContent=S.storyArc?JSON.stringify(S.storyArc,null,2):'No story arc yet.';
+  const rs=Array.isArray(S.relationships)?S.relationships:[];$('#reltag').textContent=rs.length?rs.length+' mapped':'none yet';
+  $('#relationships').innerHTML=rs.length?rs.map(r=>`<div class="msg"><b>${esc(r.a||r.from||'?')} ↔ ${esc(r.b||r.to||'?')}</b>${esc(r.relation||'')} ${r.tension?'<br><span class="note">tension: '+esc(r.tension)+'</span>':''}${r.trajectory?'<br><span class="note">arc: '+esc(r.trajectory)+'</span>':''}</div>`).join(''):'<p class="empty">The architecture pass will build the relationship map.</p>';
+}
+
 function renderBuildNote(){
   const e=$('#scenenote');if(!e)return;
-  const c=S.sceneChosen, n=(S.scenes||[]).length;
-  e.className='msg'+(c?' ok':'');
-  e.innerHTML=c
-    ? '<b>Next scene chosen</b>'+esc(c.title||'(untitled)')+(c.beat?' — '+esc(c.beat):'')
-    : '<b>No scene chosen</b>'+(n?('The Scenes tab is holding '+n+' option'+(n===1?'':'s')+'. Choose one, or let it decide.')
-                                 :'The model will offer a slate once a chapter is recorded.');
-}
+  if(!S.architectureReady){e.className='msg';e.innerHTML='<b>Architecture comes first</b>The first prompt builds the story arc, characters, relationships, and ordered scene stubs. It writes no prose.';return;}
+  const c=S.sceneChosen,open=(S.scenePlan||[]).filter(x=>String(x.status).toLowerCase()!=='done').length;
+  e.className='msg'+(c?' ok':'');e.innerHTML=c?'<b>Author scene override</b>'+esc(c.title||c.id||'(untitled)')+(c.beat?' — '+esc(c.beat):''):'<b>Model chooses the next scene</b>'+open+' unfinished scene'+(open===1?'':'s')+' remain. It is instructed to choose the earliest causally viable one, not merely the most dramatic.';}
+
 function renderThreads(){
   $('#threads').innerHTML=S.threads&&S.threads.length?S.threads.map(t=>
     `<div class="msg ${t.status==='closed'?'ok':''}" style="margin-bottom:7px">
@@ -1452,12 +1485,12 @@ function renderLibrary(){
     <div class="libro"><span class="t">${esc(r.name)}</span>
       <button class="b sm" data-rig="${r.id}">Apply</button>
       <button class="b sm" data-rigx="${r.id}">Forget</button>
-      <span class="m">${num(r.cfg.cbudget,320)}-word summary · ${num(r.cfg.cfull,1)} shown in full · ${num(r.cfg.sceneN,4)}×${num(r.cfg.sceneW,26)} slate · ${num(r.cfg.wpc,1200)}-word chapters · restraint ${num(r.cfg.restraint,3)} · ${esc(r.cfg.pov||'')}${r.cfg.styles&&r.cfg.styles.length?' · '+esc(r.cfg.styles.join(' + ')):''}</span>
+      <span class="m">${num(r.cfg.cbudget,320)}-word story summary · ${num(r.cfg.sceneHistoryBudget,260)}-word scene memory · sample ${num(r.cfg.cfull,1)?'on':'off'} · ${num(r.cfg.sceneN,12)} initial stubs × ${num(r.cfg.sceneW,26)}w · ${num(r.cfg.wpc,1200)}-word chapters · restraint ${num(r.cfg.restraint,3)} · ${esc(r.cfg.pov||'')}${r.cfg.styles&&r.cfg.styles.length?' · '+esc(r.cfg.styles.join(' + ')):''}</span>
     </div>`).join(''):'<p class="empty">No rigs yet. Set the Story and Voice tabs how you like them, then remember it.</p>';
   $$('#riglist [data-rig]').forEach(b=>b.onclick=()=>{
     const r=L.rigs.find(x=>x.id===b.dataset.rig);if(!r)return;
     const c=r.cfg;
-    ['wpc','pov','illus','restraint','cbudget','cfull','ban','sceneN','sceneW'].forEach(k=>{if(c[k]!==undefined)S[k]=c[k];});
+    ['wpc','pov','illus','restraint','cbudget','cfull','ban','sceneN','sceneW','sceneHistoryBudget'].forEach(k=>{if(c[k]!==undefined)S[k]=c[k];});
     S.styles=Array.isArray(c.styles)?c.styles.slice():S.styles;
     S.readers=Array.isArray(c.readers)?c.readers.slice():S.readers;
     (c.ownStyles||[]).forEach(x=>{if(!(S.ownStyles||[]).some(y=>y.k===x.k))(S.ownStyles=S.ownStyles||[]).push(x);});
@@ -1549,7 +1582,7 @@ function rigSave(){
   readUI();
   const name=$('#rigname').value.trim()||(S.pov+', '+S.cbudget+'w');
   const cfg={wpc:S.wpc,pov:S.pov,illus:S.illus,restraint:S.restraint,cbudget:S.cbudget,cfull:S.cfull,
-    sceneN:S.sceneN,sceneW:S.sceneW,
+    sceneN:S.sceneN,sceneW:S.sceneW,sceneHistoryBudget:S.sceneHistoryBudget,
     ban:S.ban,styles:(S.styles||[]).slice(),readers:(S.readers||[]).slice(),
     ownStyles:(S.ownStyles||[]).slice(),ownReaders:(S.ownReaders||[]).slice()};
   const at=L.rigs.find(r=>r.name.toLowerCase()===name.toLowerCase());
@@ -1573,7 +1606,7 @@ function shelfSave(){
   $('#shelfname').value='';renderLibrary();}
 
 function renderAll(){renderReader();renderPager();renderTOC();renderCast();renderStyles();
-  renderReaders();renderScenes();renderBuildNote();renderThreads();renderLibrary();writeUI();}
+  renderReaders();renderArchitecture();renderScenes();renderBuildNote();renderThreads();renderLibrary();writeUI();}
 
 /* ═══════ read aloud ═══════ */
 let sp={q:[],i:0,on:false};
@@ -1612,8 +1645,8 @@ function readUI(){
   S.world=$('#world').value;S.ending=$('#ending').value;
   S.planN=num($('#plan-n').value,12);S.wpc=num($('#wpc').value,1200);S.pov=$('#pov').value;S.illus=$('#illus').value;
   S.restraint=num($('#restraint').value,3);S.exemplar=$('#exemplar').value;S.ban=$('#ban').value;
-  S.cbudget=num($('#cbudget').value,320);S.cfull=num($('#cfull').value,1);S.steer=$('#steer').value;
-  S.sceneN=Math.max(2,Math.min(6,num($('#scene-n').value,4)));
+  S.cbudget=num($('#cbudget').value,320);S.cfull=num($('#cfull').value,1);S.sceneHistoryBudget=Math.max(80,Math.min(800,num($('#scene-hist-budget').value,260)));S.steer=$('#steer').value;
+  S.sceneN=Math.max(4,Math.min(30,num($('#scene-n').value,12)));
   S.sceneW=Math.max(10,Math.min(60,num($('#scene-w').value,26)));
   S.theme=$('#theme').value;}
 function writeUI(){
@@ -1621,7 +1654,7 @@ function writeUI(){
   $('#world').value=S.world;$('#ending').value=S.ending;
   $('#plan-n').value=S.planN;$('#wpc').value=S.wpc;$('#pov').value=S.pov;$('#illus').value=S.illus;
   $('#restraint').value=S.restraint;$('#exemplar').value=S.exemplar;$('#ban').value=S.ban;
-  $('#cbudget').value=S.cbudget;$('#cfull').value=S.cfull;$('#theme').value=S.theme;
+  $('#cbudget').value=S.cbudget;$('#cfull').value=S.cfull;$('#scene-hist-budget').value=S.sceneHistoryBudget;$('#theme').value=S.theme;
   $('#scene-n').value=S.sceneN;$('#scene-w').value=S.sceneW;
   document.body.dataset.theme=S.theme;
   $('#rlab').textContent='— '+RESTRAINT[S.restraint].split('—')[0].trim();
@@ -1643,7 +1676,7 @@ $$('nav.tabs button').forEach(b=>b.onclick=()=>{
 $('#build').onclick=build;
 $('#copy').onclick=()=>{if(!S.prompt)return toast('Build it first.');
   navigator.clipboard.writeText(S.prompt).then(()=>toast('Prompt copied')).catch(()=>toast('Copy blocked — select the text.'));};
-$('#schema').onclick=()=>navigator.clipboard.writeText(JSON.stringify(schema(S.chapters.length+1),null,2))
+$('#schema').onclick=()=>navigator.clipboard.writeText(JSON.stringify(schema(S.architectureReady?S.chapters.length+1:0,S.architectureReady?'chapter':'architecture'),null,2))
   .then(()=>toast('Schema copied')).catch(()=>toast('Copy blocked.'));
 $('#test').onclick=()=>testPaste(false);
 $('#record').onclick=record;
@@ -1679,7 +1712,7 @@ $('#upf').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileRe
 $('#reset').onclick=()=>{if(!confirm('Clear the whole book? Download first if you want it.'))return;
   S=JSON.parse(JSON.stringify(BLANK));save();renderAll();invalidate();$('#msg').innerHTML='';toast('Reset');};
 ['title','author','premise','world','ending','plan-n','wpc','pov','illus','restraint','exemplar','ban',
- 'cbudget','cfull','steer','theme','scene-n','scene-w']
+ 'cbudget','cfull','scene-hist-budget','steer','theme','scene-n','scene-w']
   .forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('input',()=>{readUI();writeUI();save();
     if(id==='scene-n'||id==='scene-w')renderScenes();
     if(id==='title'||id==='author'||id==='premise'){renderReader();renderTOC();}});});
@@ -1689,7 +1722,7 @@ $('#theme').addEventListener('change',()=>{readUI();writeUI();save();});
 $('#ownscene-use').onclick=()=>{
   const t=$('#ownscene').value.trim();
   if(!t)return toast('Say what happens first.');
-  S.sceneChosen={i:-1,title:'',beat:t,advances:'',cost:''};
+  S.sceneChosen={i:-1,id:'author:'+Date.now().toString(36),title:'author override',beat:t,purpose:'author-directed scene',depends_on:[]};
   save();renderScenes();renderBuildNote();$('#ownscene').value='';
   toast('Chapter '+(S.chapters.length+1)+' will be yours');};
 $('#scene-clear').onclick=()=>{S.sceneChosen=null;save();renderScenes();renderBuildNote();toast('Nothing chosen');};
@@ -1773,7 +1806,7 @@ if(canFS){
 try{localStorage.setItem('__t','1');localStorage.removeItem('__t');}catch(e){st(0);}
 
 /* exposed only so the gate can be exercised outside the browser */
-window.__lantern={repairJSON,checkReply,whereFailed,firstObject,bookHTML,toFiles};
+window.__lantern={repairJSON,checkReply,whereFailed,firstObject,bookHTML,toFiles,schema,normalizeScenePlan,sceneLedgerForPrompt};
 })();
 </script>
 </body>
