@@ -1,11 +1,10 @@
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>Lantern v2 — scene-first serial storybook engine</title>
+<title>Lantern v2.1 — strict JSON checkpoint story engine</title>
 <style>
 /* ═══════ themes: the chrome is the machine, the page is lit ═══════ */
 [data-theme="lantern"]{--ground:#12131f;--chrome:#1a1c2c;--chrome2:#23263a;--rule:#32364f;
@@ -230,7 +229,7 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
 <header style="position:static">
   <h1><svg class="mark" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M9.5 2h5M11 2v3M13 2v3M7 5h10l1.2 3H5.8zM6.6 8h10.8v9H6.6zM4.5 20h15M11 17v3M13 17v3"/>
-      <path d="M10 10.5h4v4h-4z" fill="currentColor" stroke="none"/></svg>Lantern<small>scene-first serial storybook</small></h1>
+      <path d="M10 10.5h4v4h-4z" fill="currentColor" stroke="none"/></svg>Lantern<small>strict JSON · scene-first · checkpointed</small></h1>
   <div class="grow"></div>
   <span class="plate" id="hd">no chapters yet</span>
   <select class="theme" id="theme">
@@ -297,9 +296,10 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
       <div class="panel">
         <h2><span>2 · Record the reply</span><span class="plate" id="gate">untested</span></h2>
         <div class="in">
-          <label class="f"><span>Paste the model's JSON</span><textarea id="paste" class="huge" placeholder="Paste the whole reply. Fences, preamble and postamble are fine — they get stripped."></textarea></label>
-          <div class="row"><button class="b on" id="test">Test JSON</button><button class="b" id="record" disabled>Record story map</button><button class="b" id="schema">Copy schema</button></div>
-          <p class="note">Nothing is recorded until it has been parsed. The first accepted reply records architecture only; it does not write chapter prose. A paste that fails is reported with the line and column, so you can tell the model where it broke.</p>
+          <label class="f"><span>Paste exactly one JSON object</span><textarea id="paste" class="huge" placeholder="The reply must begin with { and end with }. No markdown fence, no preamble, no postamble, no plain prose outside JSON."></textarea></label>
+          <div class="row"><button class="b on" id="test">Validate strict JSON</button><button class="b" id="record" disabled>Record JSON checkpoint</button><button class="b" id="schema">Copy exact schema</button></div>
+          <p class="note"><b>Hard gate:</b> Lantern does not repair, strip, or salvage model output. The reply must be one valid JSON object and must name the current parent checkpoint. Chapter text belongs inside <b>chapter.prose</b>; compressed continuity and any alterations travel beside it in the same object.</p>
+          <div class="msg"><b>Expected parent checkpoint</b><span id="replycp">root</span></div>
           <div id="msg"></div>
         </div>
       </div>
@@ -318,7 +318,7 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
       <label class="f"><span>The ending you are steering toward — sealed</span><textarea id="ending" placeholder="Optional but powerful. If you know where it lands, say so. This goes in the sealed bible: the model plans toward it and never leaks it."></textarea></label>
     </div></div>
     <div class="panel"><h2><span>Story architecture</span><span class="plate" id="archtag">not built</span></h2><div class="in">
-      <p class="note">The first model pass builds this before any prose: the whole arc, then the scene stubs that realize it. It is saved in browser memory and in book.json.</p>
+      <p class="note">The first model pass builds this before any prose: the whole arc, then the scene stubs that realize it. Every accepted pass is strict JSON and advances an explicit checkpoint saved in browser memory, book.json, and checkpoint-latest.json.</p>
       <pre class="out" id="arcbox" style="max-height:340px">No story arc yet.</pre>
     </div></div>
     <div class="panel"><h2><span>Relationships</span><span class="plate" id="reltag">none yet</span></h2><div class="in">
@@ -436,18 +436,22 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
       <label class="f"><span>Story so far — as the model last compressed it</span><textarea id="sofar" class="big" readonly></textarea></label>
     </div></div>
     <div class="panel"><h2>Open threads</h2><div class="in" id="threads"><p class="empty">Nothing yet.</p></div></div>
+    <div class="panel"><h2><span>Last state alterations</span><span class="plate">audit trail</span></h2><div class="in">
+      <p class="note">Sparse changes returned by the model after the latest accepted pass. The full current state is still stored separately; this is the explanation of what changed and why.</p>
+      <pre class="out" id="alterbox">No model-driven alterations recorded yet.</pre>
+    </div></div>
   </div><div>
     <div class="panel"><h2>Two passes, one paste</h2><div class="in">
       <p class="note">The model plans before it writes, and the plan is emitted first so the order is checkable. Planning after writing is just describing what you already did.</p>
       <label class="f"><span>Latest plan</span><textarea id="planbox" class="big" readonly></textarea></label>
     </div></div>
     <div class="panel"><h2>Save</h2><div class="in">
-      <div class="row"><button class="b on" id="dl">Download save</button><button class="b" id="up">Load</button>
+      <div class="row"><button class="b on" id="dl">Download save</button><button class="b on" data-dlcp>Download checkpoint</button><button class="b" id="up">Load save/checkpoint</button>
         <input type="file" id="upf" accept=".json" style="display:none">
         <button class="b on" id="dlhtml">Book as HTML</button>
         <button class="b" id="dltxt">Export as text</button>
         <button class="b" id="reset">Reset</button></div>
-      <p class="note"><b>Book as HTML</b> is the readable one: title page, contents, every chapter, the illustrations inline, one file that opens in any browser and prints as a book. The save file is the machine's copy — story arc, cast, relationships, scene ledger, compressed scene memory, threads and story summary.</p>
+      <p class="note"><b>checkpoint-latest.json</b> is the one-file exact continuation point: prose, architecture, ledger, compression, threads, settings, and checkpoint identity. <b>Book as HTML</b> is the readable book. The ordinary save remains a raw Lantern state file.</p>
       <div class="msg" id="store"></div>
     </div></div>
   </div></div>
@@ -457,7 +461,7 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
 <section class="view" data-v="library">
   <div class="cols"><div>
     <div class="panel"><h2><span>The folder</span><span class="plate" id="fsmode">checking</span></h2><div class="in">
-      <p class="note">One folder is one book: <b>book.json</b> for the settings, the cast and the compressed story so far; one file per chapter; the illustrations as loose SVGs; and the whole thing again as <b>book.html</b> and <b>story.md</b>. Reconstruct reads the chapter files back, so the folder is the book rather than a backup of it.</p>
+      <p class="note">One folder is one book. It now contains <b>checkpoint-latest.json</b> as the explicit one-file resume point, plus <b>book.json</b>, one JSON file per chapter, illustrations, <b>book.html</b>, and <b>story.md</b>. Reconstruct can still read the full folder, but you no longer have to guess which file represents the last checkpoint.</p>
       <div class="row">
         <button class="b on" id="fs-pick">Choose folder</button>
         <button class="b" id="fs-save" disabled>Save to folder</button>
@@ -472,7 +476,13 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
         <button class="b" id="folderin">Read a folder…</button>
         <input type="file" id="folderinf" webkitdirectory directory multiple style="display:none">
       </div>
-      <p class="note">The zip holds the same tree, book.html included. Unpack it anywhere; read it back with the button beside it.</p>
+      <p class="note">The zip holds the same tree, including <b>checkpoint-latest.json</b>. Unpack it anywhere; read it back with the button beside it.</p>
+    </div></div>
+
+    <div class="panel"><h2><span>Resume from the last checkpoint</span><span class="plate" id="cptag">root</span></h2><div class="in">
+      <div class="msg ok" id="cpbox"><b>Exact resume file</b>checkpoint-latest.json</div>
+      <div class="row"><button class="b on" data-dlcp>Download checkpoint-latest.json</button></div>
+      <p class="note"><b>To continue this exact book:</b> load or upload <b>checkpoint-latest.json</b>. It is self-contained. <b>library.json is optional</b> and only restores reusable rigs, remembered people, written voices, and readers; by itself it cannot restore the story. If the checkpoint file is missing, use Reconstruct on the whole folder so Lantern can combine <b>book.json</b> with <b>chapters/*.json</b>.</p>
     </div></div>
 
     <div class="panel"><h2><span>Shelf</span><span class="plate" id="shelftag">empty</span></h2><div class="in">
@@ -499,7 +509,7 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
       <div class="row"><button class="b" id="libdl">Download library</button><button class="b" id="libup">Load library</button>
         <input type="file" id="libupf" accept=".json" style="display:none">
         <button class="b" id="libclear">Forget the library</button></div>
-      <p class="note">Rigs and people travel with a folder in <b>library.json</b>. The shelf does not — books are heavy, and a folder already holds one.</p>
+      <p class="note"><b>library.json is not a story checkpoint.</b> It carries reusable rigs, people, voices, and readers. For story continuity, use <b>checkpoint-latest.json</b>.</p>
     </div></div>
   </div></div>
 </section>
@@ -563,17 +573,18 @@ const CASTSEED=[
  {name:'',role:'the one who complicates it',want:'',refuse:'',voice:''}];
 
 /* ═══════ state ═══════ */
-const BLANK={v:'lantern_2',theme:'lantern',title:'',author:'',premise:'',world:'',ending:'',
+const REPLY_PROTOCOL='lantern-json-v1';
+const BLANK={v:'lantern_2',app:'lantern_v2.1',theme:'lantern',title:'',author:'',premise:'',world:'',ending:'',
   planN:12,wpc:1200,pov:'close third, past',illus:'each',restraint:3,
   cast:JSON.parse(JSON.stringify(CASTSEED)),relationships:[],storyArc:null,architectureReady:false,
   styles:[],readers:['close'],exemplar:'',ban:'',ownStyles:[],ownReaders:[],
   cbudget:320,cfull:1,steer:'',
   sceneN:12,sceneW:26,sceneHistoryBudget:260,scenePlan:[],sceneMemory:'',scenes:[],sceneChosen:null,sceneLog:[],
-  chapters:[],sofar:'',bible:'',threads:[],plan:'',rcheck:null,cur:-1,prompt:''};
+  chapters:[],sofar:'',bible:'',threads:[],plan:'',rcheck:null,lastAlterations:null,checkpoint:null,cur:-1,prompt:''};
 let S=JSON.parse(JSON.stringify(BLANK));
 const K='lantern_state';
 function save(){try{localStorage.setItem(K,JSON.stringify(S));st(1);}catch(e){st(0);}}
-function load(){try{const r=localStorage.getItem(K);if(r){const o=JSON.parse(r);if(o&&o.v){S=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);S.v='lantern_2';S.relationships=Array.isArray(S.relationships)?S.relationships:[];S.architectureReady=!!S.architectureReady||(Array.isArray(S.chapters)&&S.chapters.length>0);S.scenePlan=normalizeScenePlan(Array.isArray(S.scenePlan)&&S.scenePlan.length?S.scenePlan:(S.scenes||[]));S.scenes=S.scenePlan.filter(x=>!['done','closed','foreclosed'].includes(String(x.status).toLowerCase()));}}}catch(e){}}
+function load(){try{const r=localStorage.getItem(K);if(r){const o=JSON.parse(r);if(o&&o.v){S=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);S.v='lantern_2';S.app='lantern_v2.1';S.relationships=Array.isArray(S.relationships)?S.relationships:[];S.architectureReady=!!S.architectureReady||(Array.isArray(S.chapters)&&S.chapters.length>0);S.scenePlan=normalizeScenePlan(Array.isArray(S.scenePlan)&&S.scenePlan.length?S.scenePlan:(S.scenes||[]));S.scenes=S.scenePlan.filter(x=>!['done','closed','foreclosed'].includes(String(x.status).toLowerCase()));if(!o.checkpoint)S.checkpoint=null;ensureCheckpoint(S);}}}catch(e){}}
 function st(ok){const e=$('#store');if(!e)return;e.className='msg '+(ok?'ok':'no');
   e.innerHTML=ok?'<b>Saved in this browser.</b>Download anyway — a cache clear takes the whole book with it.'
    :'<b>Browser storage unavailable.</b>Everything works in memory. Download before you close the tab.';}
@@ -587,6 +598,15 @@ const words=s=>String(s||'').trim().split(/\s+/).filter(Boolean).length;
 function toast(m){const t=$('#toast');t.textContent=m;t.className='on';setTimeout(()=>t.className='',3000);}
 function b64(s){return btoa(unescape(encodeURIComponent(s)));}
 const totalWords=()=>(S.chapters||[]).reduce((a,c)=>a+num(c.words,0),0);
+
+/* ═══════ checkpoints: exact machine continuation ═══════ */
+function hashText(x){let h=2166136261>>>0;const s=String(x||'');for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return ('00000000'+h.toString(16)).slice(-8);}
+function checkpointSeed(st){return JSON.stringify({title:st.title,architectureReady:!!st.architectureReady,storyArc:st.storyArc,cast:st.cast,relationships:st.relationships,scenePlan:st.scenePlan,sceneMemory:st.sceneMemory,sceneLog:st.sceneLog,sofar:st.sofar,threads:st.threads,planted:st.planted||[],ending:st.ending,chapters:(st.chapters||[]).map(c=>({n:c.n,title:c.title,sceneId:c.sceneId||'',sceneTitle:c.sceneTitle||'',prose:c.prose}))});}
+function ensureCheckpoint(st){st=st||S;if(st.checkpoint&&typeof st.checkpoint==='object'&&String(st.checkpoint.id||'').trim())return st.checkpoint;const n=(st.chapters||[]).length;if(st.architectureReady||n){st.checkpoint={id:'legacy-'+String(n).padStart(4,'0')+'-'+hashText(checkpointSeed(st)),seq:n+1,chapter:n,phase:'legacy-import',at:''};}else st.checkpoint={id:'root',seq:0,chapter:0,phase:'root',at:''};return st.checkpoint;}
+function advanceCheckpoint(phase){const prior=ensureCheckpoint(S),seq=num(prior.seq,0)+1;S.checkpoint={id:'cp-'+String(seq).padStart(4,'0')+'-'+hashText(checkpointSeed(S)),seq,chapter:(S.chapters||[]).length,phase:String(phase||'record'),at:new Date().toISOString()};return S.checkpoint;}
+function checkpointEnvelope(st){st=st||S;const cp=ensureCheckpoint(st);return {kind:'lantern_checkpoint',format:1,reply_protocol:REPLY_PROTOCOL,checkpoint:Object.assign({},cp),resume:{next_phase:st.architectureReady?'chapter':'architecture',next_chapter:(st.chapters||[]).length+1},state:Object.assign({},st,{prompt:''})};}
+function checkpointState(o){return o&&o.kind==='lantern_checkpoint'&&o.state&&typeof o.state==='object'?o.state:null;}
+function downloadCheckpoint(){readUI();ensureCheckpoint(S);const out=checkpointEnvelope(S),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));a.download='checkpoint-latest.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1200);toast('Checkpoint downloaded: '+out.checkpoint.id);}
 
 /* ═══════ the parse gate ═══════
    Nothing reaches the book until it has been through repairJSON + checkReply.
@@ -642,33 +662,12 @@ function killNBSP(s){const t=s.replace(/\u00a0/g,' ');return [t,t!==s];}
 
 function repairJSON(raw){
   const fixes=[];
-  let s=String(raw==null?'':raw).replace(/^\uFEFF/,'').trim();
-  if(!s) return {obj:null,fixes,error:'Nothing pasted.',text:''};
-  let lastErr=null;
-  const tryParse=t=>{try{return JSON.parse(t);}catch(e){lastErr=e;return null;}};
-
-  let obj=tryParse(s);
-  if(obj) return {obj,fixes,error:null,text:s};
-
-  const fence=s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if(fence&&fence[1].trim()){s=fence[1].trim();fixes.push('stripped markdown fences');
-    obj=tryParse(s); if(obj) return {obj,fixes,error:null,text:s};}
-
-  const cut=firstObject(s);
-  if(cut&&cut!==s){s=cut;fixes.push('discarded text outside the object');
-    obj=tryParse(s); if(obj) return {obj,fixes,error:null,text:s};}
-
-  const safe=[[stripTrailingCommas,'removed trailing commas'],
-              [escapeInStrings,'escaped raw newlines, tabs and stray backslashes inside strings']];
-  for(let i=0;i<safe.length;i++){const [t,hit]=safe[i][0](s);
-    if(hit){s=t;fixes.push(safe[i][1]);obj=tryParse(s);if(obj)return {obj,fixes,error:null,text:s};}}
-
-  const risky=[[straightenKeys,'replaced curly quotes around key names'],
-               [killNBSP,'replaced non-breaking spaces']];
-  for(let i=0;i<risky.length;i++){const [t,hit]=risky[i][0](s);
-    if(hit){const o=tryParse(t);if(o){fixes.push(risky[i][1]);return {obj:o,fixes,error:null,text:t};}}}
-
-  return {obj:null,fixes,error:lastErr?lastErr.message:'unparseable',text:s};}
+  const s=String(raw==null?'':raw).replace(/^\uFEFF/,'').trim();
+  if(!s)return {obj:null,fixes,error:'Nothing pasted.',text:''};
+  if(s[0]!=='{'||s[s.length-1]!=='}')return {obj:null,fixes,error:'Strict JSON required: the entire reply must be one object beginning with { and ending with }. No fences, preamble, postamble, or plain text.',text:s};
+  let obj=null;try{obj=JSON.parse(s);}catch(e){return {obj:null,fixes,error:e&&e.message?e.message:'Invalid JSON.',text:s};}
+  if(!obj||typeof obj!=='object'||Array.isArray(obj))return {obj:null,fixes,error:'The JSON root must be one object.',text:s};
+  return {obj,fixes,error:null,text:s};}
 
 function whereFailed(text,msg){
   const m=/position (\d+)/.exec(msg||''); if(!m) return '';
@@ -682,6 +681,12 @@ function checkReply(obj,budget,wantSVG,slate,phase){
   const fail=[],warn=[];
   const sN=num((slate||{}).n,12), sW=num((slate||{}).w,26), histBudget=num((slate||{}).histBudget,260), architecture=phase==='architecture';
   if(!obj||typeof obj!=='object'||Array.isArray(obj)){fail.push('the reply is not a JSON object');return {fail,warn};}
+  if(obj.protocol!==REPLY_PROTOCOL)fail.push('protocol must be exactly "'+REPLY_PROTOCOL+'"');
+  if(String(obj.phase||'')!==phase)fail.push('phase must be exactly "'+phase+'"');
+  const expectedParent=String((slate||{}).checkpoint||ensureCheckpoint(S).id);
+  if(String(obj.parent_checkpoint||'')!==expectedParent)fail.push('parent_checkpoint does not match the current checkpoint '+expectedParent+' — this looks stale or belongs to another branch');
+  if(!obj.alterations||typeof obj.alterations!=='object'||Array.isArray(obj.alterations))fail.push('no "alterations" audit object');
+  else ['scene_changes','relationship_changes','thread_changes','continuity_notes'].forEach(k=>{if(!Array.isArray(obj.alterations[k]))fail.push('alterations.'+k+' must be a list (empty is fine)');});
   if(architecture){
     if(!obj.story_arc||typeof obj.story_arc!=='object')fail.push('no "story_arc" — the first pass must build the whole arc before prose');
     if(!Array.isArray(obj.cast)||obj.cast.length<2)fail.push('no usable "cast" — the first pass must create the principal characters');
@@ -707,18 +712,19 @@ function checkReply(obj,budget,wantSVG,slate,phase){
   if(!obj.plan) fail.push('no "plan" — pass two is missing');
   if(prose.length<200) fail.push('no chapter prose, or too short to be a chapter');
   if(!obj.story_so_far) fail.push('no "story_so_far" — the next chapter would have nothing to run on');
-  if(!obj.scene_memory) warn.push('no "scene_memory" — completed scenes will lose their compressed continuity layer');
+  if(!String(obj.scene_memory||'').trim()) fail.push('no "scene_memory" — every writing pass must return the rewritten bounded scene memory');
   if(obj.scene_memory&&words(obj.scene_memory)>histBudget*1.3)warn.push('scene memory ran to '+words(obj.scene_memory)+' words against a '+histBudget+' budget');
   const doneId=String((obj.scene_completed||{}).id||'');if(!doneId)fail.push('no scene_completed.id');else if(choiceId&&doneId!==choiceId)fail.push('scene_completed.id does not match scene_choice.id');
   if(!ch.title) warn.push('no chapter title');
   if(prose.length>1200&&prose.indexOf('\n')<0)warn.push('prose has no paragraph breaks — check the \\n\\n survived');
   if(/^#{1,6}\s/m.test(prose))warn.push('markdown headings inside the prose');
   if(obj.story_so_far&&words(obj.story_so_far)>budget*1.3)warn.push('summary ran to '+words(obj.story_so_far)+' words against a '+budget+' budget');
-  if(obj.threads&&!Array.isArray(obj.threads))warn.push('"threads" is not a list');
+  if(!Array.isArray(obj.threads))fail.push('"threads" must come back as the complete current list');
   if(!obj.reader_check)warn.push('no reader check');
   if(!Array.isArray(obj.scene_plan)||!obj.scene_plan.length)fail.push('no "scene_plan" — the persistent scene ledger must come back every writing pass');
   else if(prior.length){const returned=new Set(obj.scene_plan.map(x=>String((x||{}).id||'')));const missing=prior.map(x=>String((x||{}).id||'')).filter(id=>id&&!returned.has(id));if(missing.length)fail.push('scene_plan dropped persistent ids: '+missing.slice(0,6).join(', ')+(missing.length>6?'…':''));}
-  if(obj.relationships&&!Array.isArray(obj.relationships))warn.push('"relationships" is not a list');
+  if(!Array.isArray(obj.relationships))fail.push('"relationships" must come back as the complete current relationship state');
+  if(!obj.bible_update||typeof obj.bible_update!=='object'||Array.isArray(obj.bible_update))fail.push('no "bible_update" state');
   if(wantSVG){
     const svg=String((obj.illustration||{}).svg||'').trim();
     if(!svg)warn.push('no illustration came back');
@@ -865,6 +871,7 @@ function pad(n){return String(num(n,0)).padStart(2,'0');}
 function toFiles(st,lib){
   const book=Object.assign({},st,{chapters:[],prompt:''});
   const files=[
+    {name:'checkpoint-latest.json',text:JSON.stringify(checkpointEnvelope(st),null,2)},
     {name:'book.json',text:JSON.stringify(book,null,2)},
     {name:'library.json',text:JSON.stringify({v:(lib&&lib.v)||'lantern_lib_1',rigs:(lib&&lib.rigs)||[],
       people:(lib&&lib.people)||[],styles:(lib&&lib.styles)||[],readers:(lib&&lib.readers)||[]},null,2)}
@@ -879,15 +886,19 @@ function toFiles(st,lib){
     (st.chapters||[]).flatMap(c=>['## '+pad(c.n)+'. '+String(c.title||''),'',String(c.prose||''),''])).join('\n')});
   files.push({name:'README.md',text:[
     '# '+(st.title||'Untitled'),'','Written with Lantern. This folder is the book.','',
+    '## Resume exactly from the last checkpoint','',
+    '**Use checkpoint-latest.json.** It is the self-contained continuation file: current prose, architecture, cast, relationships, scene ledger, compressed memories, threads, settings, and checkpoint identity.','',
+    'library.json is optional reusable preference memory only. It cannot restore the story by itself.','',
+    '- checkpoint-latest.json — ONE-FILE RESUME. Load/upload this to recover the exact latest checkpoint.',
     '- book.html — the readable book: title page, contents, chapters, illustrations. Open it in any browser.',
-    '- book.json — settings, story arc, cast, relationships, scene ledger, compressed scene memory, threads and story summary. The canonical file.',
-    '- chapters/NN-title.json — one per chapter, prose and illustration. These are what get read back.',
+    '- book.json — folder-level story state without embedded chapter prose; Reconstruct combines it with chapter JSON files.',
+    '- chapters/NN-title.json — one per chapter, prose and illustration. Reconstruct reads these back.',
     '- chapters/NN-title.md — the same prose, for reading anywhere.',
     '- illustrations/NN-title.svg — the illustrations on their own.',
     '- library.json — remembered rigs, people, voices and readers. Not specific to this book.',
     '- story.md — the whole book in one plain file.','',
-    'To reopen: Library tab, choose this folder, Reconstruct. Edits to the .md and .html files are not read back;',
-    'the .json files are.'].join('\n')});
+    'Fastest exact reopen: load checkpoint-latest.json with the Save → Load save/checkpoint button.',
+    'Folder recovery: Library tab, choose this folder, Reconstruct. Edits to the .md and .html files are not read back; the .json files are.'].join('\n')});
   return files;}
 
 function normalize(map){
@@ -903,8 +914,10 @@ function fromFiles(rawMap){
   const map=normalize(rawMap||{});
   const notes=[]; let book=null, library=null;
   const get=n=>{const k=Object.keys(map).find(x=>x.toLowerCase()===n);return k?map[k]:null;};
+  const cpj=get('checkpoint-latest.json');
+  if(cpj){try{const cpo=JSON.parse(cpj),cps=checkpointState(cpo);if(cps){book=cps;notes.push('restored exact state from checkpoint-latest.json ('+String((cpo.checkpoint||{}).id||'checkpoint')+')');}else notes.push('checkpoint-latest.json was not a Lantern checkpoint');}catch(e){notes.push('checkpoint-latest.json did not parse');}}
   const bj=get('book.json');
-  if(bj){try{book=JSON.parse(bj);}catch(e){notes.push('book.json did not parse');}}
+  if(!book&&bj){try{book=JSON.parse(bj);}catch(e){notes.push('book.json did not parse');}}
   if(!book){
     for(const k of Object.keys(map)){
       if(!/\.json$/i.test(k)||/chapters\//i.test(k)||/library\.json$/i.test(k))continue;
@@ -928,31 +941,32 @@ function fromFiles(rawMap){
     book.chapters=dedup;notes.push(dedup.length+' chapter files read');
   }else if(!Array.isArray(book.chapters))book.chapters=[];
   else if(book.chapters.length)notes.push('no chapter files; used the copy inside book.json');
-  const state=Object.assign(JSON.parse(JSON.stringify(BLANK)),book);state.v='lantern_2';
+  const state=Object.assign(JSON.parse(JSON.stringify(BLANK)),book);state.v='lantern_2';state.app='lantern_v2.1';
   state.chapters=(state.chapters||[]).map(c=>({
     n:num(c.n,0),title:String(c.title||''),prose:String(c.prose||''),
     svg:String(c.svg||''),cap:String(c.cap||''),
-    words:num(c.words,words(c.prose)),at:String(c.at||''),orderOK:!!c.orderOK}));
+    words:num(c.words,words(c.prose)),at:String(c.at||''),orderOK:!!c.orderOK,sceneId:String(c.sceneId||''),sceneTitle:String(c.sceneTitle||'')}));
   state.architectureReady=!!state.architectureReady||state.chapters.length>0;
   if(!Array.isArray(state.scenePlan)||!state.scenePlan.length)state.scenePlan=normalizeScenePlan(state.scenes||[]);
   state.scenePlan=normalizeScenePlan(state.scenePlan);state.relationships=Array.isArray(state.relationships)?state.relationships:[];
-  state.cur=Math.max(-1,Math.min(num(state.cur,-1),state.chapters.length-1));
+  state.cur=Math.max(-1,Math.min(num(state.cur,-1),state.chapters.length-1));ensureCheckpoint(state);
   return {state,library,notes};}
 
 function applyState(o){
   if(!o||typeof o!=='object')return false;
-  const s=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);s.v='lantern_2';
+  const wrapped=checkpointState(o);if(wrapped)o=wrapped;
+  const s=Object.assign(JSON.parse(JSON.stringify(BLANK)),o);s.v='lantern_2';s.app='lantern_v2.1';
   s.chapters=(Array.isArray(s.chapters)?s.chapters:[]).map(c=>({
     n:num(c.n,0),title:String(c.title||''),prose:String(c.prose||''),
     svg:safeSVG(c.svg),cap:String(c.cap||''),
-    words:num(c.words,words(c.prose)),at:String(c.at||''),orderOK:!!c.orderOK}));
+    words:num(c.words,words(c.prose)),at:String(c.at||''),orderOK:!!c.orderOK,sceneId:String(c.sceneId||''),sceneTitle:String(c.sceneTitle||'')}));
   s.cast=Array.isArray(s.cast)?s.cast:[];
   s.scenes=Array.isArray(s.scenes)?s.scenes:[];
   s.scenePlan=normalizeScenePlan(Array.isArray(s.scenePlan)&&s.scenePlan.length?s.scenePlan:s.scenes);
   s.relationships=Array.isArray(s.relationships)?s.relationships:[];s.architectureReady=!!s.architectureReady||s.chapters.length>0;
   s.scenes=s.scenePlan.filter(x=>!['done','closed','foreclosed'].includes(String(x.status).toLowerCase()));
   s.sceneLog=Array.isArray(s.sceneLog)?s.sceneLog:[];
-  s.cur=Math.max(-1,Math.min(num(s.cur,-1),s.chapters.length-1));
+  s.cur=Math.max(-1,Math.min(num(s.cur,-1),s.chapters.length-1));ensureCheckpoint(s);
   S=s;invalidate();$('#msg').innerHTML='';save();renderAll();
   return true;}
 
@@ -1134,6 +1148,12 @@ function build(){
   const architecture=!S.architectureReady;
   const n=S.chapters.length+1;
   const P=[];
+  const parentCheckpoint=ensureCheckpoint(S).id;
+  P.push('════ ABSOLUTE MACHINE-I/O CONTRACT ════');
+  P.push(`Your entire reply MUST be exactly one valid JSON object using protocol "${REPLY_PROTOCOL}". First non-whitespace character: {. Last non-whitespace character: }. No markdown fences, no preamble, no postamble, no plain prose outside JSON. Lantern will not repair or strip anything.`);
+  P.push(`Set "parent_checkpoint" exactly to "${parentCheckpoint}". A different value is rejected as stale or from another branch.`);
+  P.push('If you need to explain something, put it inside an allowed JSON string/array field. Never answer with manuscript text outside the object.');
+  P.push('');
   if(architecture){
     const seedCast=S.cast.filter(c=>c.name||c.role);
     P.push(`STORYBOOK ENGINE — ${S.title||'untitled'}. FIRST PASS: STORY ARCHITECTURE ONLY. Do not write chapter prose.`);
@@ -1151,7 +1171,7 @@ function build(){
     P.push('Give every scene a stable id, order, characters present, purpose, what later beat it pays off, prerequisites by scene id, and status "planned". The first few scenes must be genuinely writable next; do not make the opening wait for exposition.');
     P.push('The map is a scaffold, not a prison: later writing passes may revise future stubs when causality earns it, but they must preserve stable ids whenever the scene is still recognizably the same scene.');
     P.push('');P.push('════ THREADS ════');P.push('List the initial unresolved obligations/questions the scene map is designed to move.');
-    P.push('');P.push('════ OUTPUT ════');P.push('One JSON object only. No chapter prose.');P.push(JSON.stringify(schema(0,'architecture'),null,2));
+    P.push('');P.push('════ OUTPUT ════');P.push('One strict JSON object only. No chapter prose. Include protocol, phase, exact parent_checkpoint, complete architecture state, and an alterations audit.');P.push(JSON.stringify(schema(0,'architecture'),null,2));
   }else{
     const bible={ending:S.ending,story_arc:S.storyArc,relationships:S.relationships,threads:S.threads,sofar:S.sofar,
       planted:S.planted||[],scene_memory:S.sceneMemory,scene_ledger:sceneLedgerForPrompt(),scene_taken:S.sceneLog||[],chosen:S.sceneChosen||null,
@@ -1186,11 +1206,14 @@ function build(){
     P.push('');P.push('════ THE READER ════');P.push('  · '+(readerText()||'a general adult reader'));
     P.push('Report what this reader now believes, the question they carry forward, and the likeliest paragraph to lose them.');
     if(S.illus!=='none'){P.push('');P.push('════ ILLUSTRATION ════');P.push(`Provide ${S.illus==='each'?'one illustration':'an illustration only if earned'}, raw inline SVG on viewBox 0 0 800 480. No text, external references, raster, scripts, or spoiler.`);}
+    P.push('');P.push('════ ITERATIVE STATE RETURN ════');
+    P.push('This one JSON reply must return three layers together: (1) chapter.prose = the new readable text; (2) the FULL current continuity state = story_so_far, scene_memory, scene_plan, relationships, threads, and bible_update; (3) alterations = a sparse audit of any state changes you made and why. Empty alteration arrays are correct when nothing changed.');
+    P.push('The full-state fields are not deltas: return them even when mostly unchanged, because Lantern reads them to build the next turn. The alterations field is the delta/audit layer.');
     P.push('');P.push('════ COMPRESSION ════');
     P.push(`Rewrite the ENTIRE story so far in at most ${S.cbudget} words, including this chapter. Keep causal chain, character positions, obligations and consequential facts; drop decorative prose. Rewrite, never append.`);
     if(S.steer.trim()){P.push('');P.push('════ THE AUTHOR ASKS ════');P.push(S.steer.trim());}
-    P.push('');P.push('════ TEST BEFORE YOU SEND ════');P.push('Return one valid JSON object. Test it with JSON.parse/json.loads if you can. Paragraph breaks inside strings are \\n\\n. No trailing commas, raw line breaks inside strings, truncated SVG, or commentary around the object.');
-    P.push('');P.push('════ OUTPUT ════');P.push('One JSON object, scene_choice first, plan second, prose third.');P.push(JSON.stringify(schema(n,'chapter'),null,2));
+    P.push('');P.push('════ TEST BEFORE YOU SEND ════');P.push(`Return exactly one strict JSON object with protocol "${REPLY_PROTOCOL}", phase "chapter", and parent_checkpoint "${parentCheckpoint}". Test it with JSON.parse/json.loads if you can. Paragraph breaks inside strings are \\n\\n. No trailing commas, raw line breaks inside strings, truncated SVG, fences, or commentary around the object.`);
+    P.push('');P.push('════ OUTPUT ════');P.push('One JSON object only. Metadata first; then scene_choice, plan, chapter prose; then full compressed state and the alterations audit.');P.push(JSON.stringify(schema(n,'chapter'),null,2));
   }
   S.prompt=P.join('\n');$('#prompt').textContent=S.prompt;
   const box=$('#sealbox');const sealObj=architecture?{ending:S.ending}:{story_arc:S.storyArc,relationships:S.relationships,scene_memory:S.sceneMemory,scene_ledger:sceneLedgerForPrompt(),ending:S.ending};
@@ -1199,14 +1222,22 @@ function build(){
   save();toast(architecture?'Story architecture prompt built':'Prompt built for chapter '+n);
 }
 function schema(n,phase){
+  const parent=ensureCheckpoint(S).id;
   if(phase==='architecture')return{
+    protocol:REPLY_PROTOCOL,
+    phase:'architecture',
+    parent_checkpoint:parent,
     story_arc:{opening_pressure:'what destabilizes ordinary life',escalation:['irreversible turn 1','irreversible turn 2'],midpoint:'what changes the meaning of the problem',crisis:'the costly narrowing of choices',climax:'the decisive collision',resolution:'what is different afterward'},
     cast:[{name:'name',role:'story role',want:'what they pursue',refuse:'line they will not cross',voice:'how they speak'}],
     relationships:[{a:'character A',b:'character B',relation:'what they are to one another',misread:'what one or both get wrong',tension:'current live tension',trajectory:'how this relationship is expected to change'}],
     scene_stubs:[{id:'s01',order:1,title:'short scene name',beat:'concrete place/person/action',characters:['name'],purpose:'what causal work this scene does',pays_off:'later beat it prepares',depends_on:[],status:'planned'}],
     threads:[{thread:'an unresolved obligation/question',status:'open',note:'one line'}],
-    bible_update:{ending_still:'where this is heading in one line',guns:['things deliberately planted for later']}};
+    bible_update:{ending_still:'where this is heading in one line',guns:['things deliberately planted for later']},
+    alterations:{scene_changes:[],relationship_changes:[],thread_changes:[],continuity_notes:['initial architecture created']}};
   return{
+    protocol:REPLY_PROTOCOL,
+    phase:'chapter',
+    parent_checkpoint:parent,
     scene_choice:{id:'stable id from scene ledger',title:'chosen scene',reason:'why this is the immediate next scene'},
     plan:{beats:['what must land'],reveals:['what the reader learns'],withheld:['what stays back and why'],planted:'one concrete thing placed now'},
     chapter:{number:n,title:'chapter title',prose:'The full chapter. Use \\n\\n between paragraphs. No markdown headings.'},
@@ -1218,7 +1249,8 @@ function schema(n,phase){
     reader_check:{reader:'which reader',now_believes:'what they now hold true',carrying:'question carried forward',would_stop_at:'weakest paragraph and why'},
     story_so_far:'the ENTIRE story rewritten within the word budget',
     threads:[{thread:'an unresolved obligation',status:'open | advanced | closed',note:'one line'}],
-    bible_update:{ending_still:'where this is heading, one line',guns:['things planted and not yet fired']}};}
+    bible_update:{ending_still:'where this is heading, one line',guns:['things planted and not yet fired']},
+    alterations:{scene_changes:[{id:'stable scene id',action:'revised | added | foreclosed',why:'causal reason'}],relationship_changes:[{a:'character A',b:'character B',change:'what changed',why:'what caused it'}],thread_changes:[{thread:'thread name',change:'advanced | closed | reframed',why:'what caused it'}],continuity_notes:['only changed assumptions/facts worth auditing']}};}
 
 /* ═══════ test, then record ═══════ */
 let verified=null;   /* {raw, obj, fixes} — the only door into the book */
@@ -1242,19 +1274,19 @@ function testPaste(quiet){
     m.innerHTML='<div class="msg no"><b>Does not parse.</b>'+esc(r.error)+
       (r.fixes.length?'<br>Tried: '+esc(r.fixes.join('; '))+'.':'')+
       '</div>'+(w?'<div class="diag">'+esc(w)+'</div>':'')+
-      '<div class="msg">Paste the location above back to the model and ask it to re-emit the object, validated.</div>';
+      '<div class="msg"><b>No repair was attempted.</b> Ask the model to re-emit exactly one valid JSON object — no fence, preamble, postamble, or plain prose.</div>';
     if(!quiet)toast('Still broken — see the line and column');
     return false;}
   const phase=S.architectureReady?'chapter':'architecture';
-  const c=checkReply(r.obj,S.cbudget,S.illus!=='none',{n:phase==='architecture'?Math.max(S.sceneN,S.planN):S.sceneN,w:S.sceneW,histBudget:S.sceneHistoryBudget,plan:S.scenePlan,allowedChosenId:(S.sceneChosen||{}).id||''},phase);
+  const c=checkReply(r.obj,S.cbudget,S.illus!=='none',{n:phase==='architecture'?Math.max(S.sceneN,S.planN):S.sceneN,w:S.sceneW,histBudget:S.sceneHistoryBudget,plan:S.scenePlan,allowedChosenId:(S.sceneChosen||{}).id||'',checkpoint:ensureCheckpoint(S).id},phase);
   const ch=r.obj.chapter||{};
   const iS=r.text.indexOf('\"scene_choice\"'), iP=r.text.indexOf('\"plan\"'), iC=r.text.indexOf('\"chapter\"');
   const orderOK=phase==='architecture'?true:(iS>=0&&iP>=0&&iC>=0&&iS<iP&&iP<iC);
   const facts=phase==='architecture'
-    ?[/PARSE:\s*OK/i.test(raw)?'parses as JSON, and the model says it checked':'parses as JSON',
+    ?['strict JSON object; no wrapper or repair',
       (r.obj.cast||[]).length+' characters', (r.obj.relationships||[]).length+' relationships',
       (r.obj.scene_stubs||[]).length+' scene stubs built before prose', (r.obj.threads||[]).length+' initial threads']
-    :[/PARSE:\s*OK/i.test(raw)?'parses as JSON, and the model says it checked':'parses as JSON',
+    :['strict JSON object; no wrapper or repair',
       words(ch.prose)+' words of prose in '+String(ch.prose||'').split(/\n{2,}/).filter(Boolean).length+' paragraphs',
       orderOK?'scene choice → plan → prose':'scene choice / plan / prose order is wrong',
       r.obj.story_so_far?words(r.obj.story_so_far)+'-word summary against a '+S.cbudget+' budget':'no summary',
@@ -1268,7 +1300,7 @@ function testPaste(quiet){
     if(!quiet)toast(phase==='architecture'?'Parsed, but the story map is incomplete':'Parsed, but the chapter is incomplete');
     return false;}
   verified={raw,obj:r.obj,fixes:r.fixes,orderOK};
-  setGate('ok','tested — ready');
+  setGate('ok','strict JSON — ready');
   m.innerHTML='<div class="msg ok"><b>Tested and ready to record.</b><ul>'+
     facts.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>'+
     (r.fixes.length?'<div class="msg"><b>Repaired on the way in</b><ul>'+r.fixes.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'')+
@@ -1287,9 +1319,9 @@ function record(){
     S.scenePlan=normalizeScenePlan(o.scene_stubs||[]);refreshScenesFromPlan();
     S.threads=Array.isArray(o.threads)?o.threads:[];S.planted=((o.bible_update||{}).guns)||[];
     if((o.bible_update||{}).ending_still)S.ending=S.ending||String(o.bible_update.ending_still);
-    S.architectureReady=true;S.plan=JSON.stringify(o.story_arc||{},null,1);S.prompt='';S.sceneChosen=null;S.sceneMemory='';S.sceneLog=[];
+    S.architectureReady=true;S.plan=JSON.stringify(o.story_arc||{},null,1);S.prompt='';S.sceneChosen=null;S.sceneMemory='';S.sceneLog=[];S.lastAlterations=o.alterations||null;advanceCheckpoint('architecture');
     $('#paste').value='';invalidate();save();renderAll();if(L.mirror&&dirHandle)saveFolder(true);
-    $('#msg').innerHTML='<div class="msg ok"><b>Story architecture recorded.</b>'+S.cast.length+' characters · '+S.relationships.length+' relationships · '+S.scenePlan.length+' scene stubs. Chapter 1 will now choose the best immediate next scene.</div>';
+    $('#msg').innerHTML='<div class="msg ok"><b>Story architecture recorded.</b>'+S.cast.length+' characters · '+S.relationships.length+' relationships · '+S.scenePlan.length+' scene stubs. New checkpoint: <b>'+esc(ensureCheckpoint(S).id)+'</b>. Chapter 1 will now choose the best immediate next scene.</div>';
     toast('Story map recorded — ready for chapter 1');return;
   }
   const ch=o.chapter||{},prose=String(ch.prose||'').trim(),n=num(ch.number,S.chapters.length+1);
@@ -1308,10 +1340,10 @@ function record(){
   if(chosenId&&!S.scenePlan.some(x=>x.id===chosenId))S.scenePlan.push(cleanSceneStub({id:chosenId,order:S.scenePlan.length+1,title:done.title||choice.title,beat:'',status:'done',summary:done.summary||''},S.scenePlan.length));
   refreshScenesFromPlan();
   S.sceneLog=(S.sceneLog||[]).concat([{n,id:chosenId,title:String(done.title||choice.title||S.sceneChosen?.title||'scene'),summary:String(done.summary||'')}]);
-  S.sceneChosen=null;if((o.bible_update||{}).ending_still)S.ending=S.ending||String(o.bible_update.ending_still);
+  S.sceneChosen=null;if((o.bible_update||{}).ending_still)S.ending=S.ending||String(o.bible_update.ending_still);S.lastAlterations=o.alterations||null;advanceCheckpoint('chapter');
   S.cur=S.chapters.length-1;S.steer='';$('#steer').value='';$('#paste').value='';invalidate();save();renderAll();if(L.mirror&&dirHandle)saveFolder(true);
   const flags=[!rec.orderOK?'scene choice / plan / prose order was wrong':'',words(S.sofar)>S.cbudget*1.3?'story summary over budget':'',words(S.sceneMemory)>S.sceneHistoryBudget*1.3?'scene memory over budget':'',(S.illus!=='none'&&!rec.svg)?'no usable illustration':''].filter(Boolean);
-  $('#msg').innerHTML='<div class="msg ok"><b>Chapter '+n+' recorded — '+rec.words+' words.</b>'+(flags.length?' Flags: '+esc(flags.join('; '))+'.':' Scene '+esc(chosenId||'chosen')+' is now marked complete; the next prompt carries the updated ledger and compressed scene memory.')+'</div>';
+  $('#msg').innerHTML='<div class="msg ok"><b>Chapter '+n+' recorded — '+rec.words+' words.</b>'+(flags.length?' Flags: '+esc(flags.join('; '))+'.':' Scene '+esc(chosenId||'chosen')+' is now marked complete; the next prompt carries the updated ledger and compressed scene memory.')+'<br>Checkpoint: <b>'+esc(ensureCheckpoint(S).id)+'</b></div>';
   toast('Chapter '+n+' recorded');}
 
 /* ═══════ paging ═══════ */
@@ -1478,7 +1510,9 @@ function renderThreads(){
       <b>${esc(t.thread||'thread')} — ${esc(t.status||'open')}</b>${esc(t.note||'')}</div>`).join('')
     :'<p class="empty">Nothing yet.</p>';
   $('#sofar').value=S.sofar||''; $('#planbox').value=S.plan||'';
+  const ab=$('#alterbox');if(ab)ab.textContent=S.lastAlterations?JSON.stringify(S.lastAlterations,null,2):'No model-driven alterations recorded yet.';
 }
+function renderCheckpoint(){const cp=ensureCheckpoint(S),tag=$('#cptag'),box=$('#cpbox'),reply=$('#replycp');if(tag)tag.textContent=cp.id;if(reply)reply.textContent=cp.id;if(box){box.className='msg ok';box.innerHTML='<b>Exact resume file: checkpoint-latest.json</b>Current checkpoint <b>'+esc(cp.id)+'</b> · '+(S.architectureReady?'next chapter '+(S.chapters.length+1):'architecture not yet recorded')+'. The checkpoint file contains the full self-contained story state.';}}
 function renderLibrary(){
   const rl=$('#riglist');if(!rl)return;
   rl.innerHTML=L.rigs.length?L.rigs.map(r=>`
@@ -1606,7 +1640,7 @@ function shelfSave(){
   $('#shelfname').value='';renderLibrary();}
 
 function renderAll(){renderReader();renderPager();renderTOC();renderCast();renderStyles();
-  renderReaders();renderArchitecture();renderScenes();renderBuildNote();renderThreads();renderLibrary();writeUI();}
+  renderReaders();renderArchitecture();renderScenes();renderBuildNote();renderThreads();renderLibrary();renderCheckpoint();writeUI();}
 
 /* ═══════ read aloud ═══════ */
 let sp={q:[],i:0,on:false};
@@ -1701,16 +1735,16 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();goTo(S.cur-1);}});
 
 $('#sp-play').onclick=speak; $('#sp-stop').onclick=stopSpeak;
-$('#dl').onclick=download; $('#dltxt').onclick=exportText;
+$('#dl').onclick=download; $('#dltxt').onclick=exportText;$$('[data-dlcp]').forEach(b=>b.onclick=downloadCheckpoint);
 $('#dlhtml').onclick=exportHTML; $('#html2').onclick=exportHTML; $('#html3').onclick=exportHTML;
 $('#up').onclick=()=>$('#upf').click();
 $('#upf').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const o=JSON.parse(String(r.result));if(!o||!o.v)throw 0;
-    applyState(o);toast('Loaded');}
-    catch(x){toast('That is not a Lantern save file.');}};
+    if(!applyState(o))throw 0;toast(checkpointState(o)?'Checkpoint loaded':'Save loaded');}
+    catch(x){toast('That is not a Lantern save or checkpoint file.');}};
   r.readAsText(f);e.target.value='';};
 $('#reset').onclick=()=>{if(!confirm('Clear the whole book? Download first if you want it.'))return;
-  S=JSON.parse(JSON.stringify(BLANK));save();renderAll();invalidate();$('#msg').innerHTML='';toast('Reset');};
+  S=JSON.parse(JSON.stringify(BLANK));ensureCheckpoint(S);save();renderAll();invalidate();$('#msg').innerHTML='';toast('Reset');};
 ['title','author','premise','world','ending','plan-n','wpc','pov','illus','restraint','exemplar','ban',
  'cbudget','cfull','scene-hist-budget','steer','theme','scene-n','scene-w']
   .forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('input',()=>{readUI();writeUI();save();
@@ -1806,8 +1840,9 @@ if(canFS){
 try{localStorage.setItem('__t','1');localStorage.removeItem('__t');}catch(e){st(0);}
 
 /* exposed only so the gate can be exercised outside the browser */
-window.__lantern={repairJSON,checkReply,whereFailed,firstObject,bookHTML,toFiles,schema,normalizeScenePlan,sceneLedgerForPrompt};
+window.__lantern={repairJSON,checkReply,whereFailed,firstObject,bookHTML,toFiles,schema,normalizeScenePlan,sceneLedgerForPrompt,checkpointEnvelope,ensureCheckpoint,advanceCheckpoint,REPLY_PROTOCOL};
 })();
 </script>
 </body>
 </html>
+
