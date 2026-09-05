@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>Lantern v2.1 — strict JSON checkpoint story engine</title>
+<title>Lantern v2.2 — strict JSON checkpoint story engine</title>
 <style>
 /* ═══════ themes: the chrome is the machine, the page is lit ═══════ */
 [data-theme="lantern"]{--ground:#12131f;--chrome:#1a1c2c;--chrome2:#23263a;--rule:#32364f;
@@ -297,7 +297,7 @@ pre.out::-webkit-scrollbar-track,textarea::-webkit-scrollbar-track{background:tr
         <h2><span>2 · Record the reply</span><span class="plate" id="gate">untested</span></h2>
         <div class="in">
           <label class="f"><span>Paste exactly one JSON object</span><textarea id="paste" class="huge" placeholder="The reply must begin with { and end with }. No markdown fence, no preamble, no postamble, no plain prose outside JSON."></textarea></label>
-          <div class="row"><button class="b on" id="test">Validate strict JSON</button><button class="b" id="record" disabled>Record JSON checkpoint</button><button class="b" id="schema">Copy exact schema</button></div>
+          <div class="row"><button class="b on" id="test">Validate strict JSON</button><button class="b" id="stamp">Stamp checkpoint</button><button class="b" id="record" disabled>Record JSON checkpoint</button><button class="b" id="schema">Copy exact schema</button></div>
           <p class="note"><b>Hard gate:</b> Lantern does not repair, strip, or salvage model output. The reply must be one valid JSON object and must name the current parent checkpoint. Chapter text belongs inside <b>chapter.prose</b>; compressed continuity and any alterations travel beside it in the same object.</p>
           <div class="msg"><b>Expected parent checkpoint</b><span id="replycp">root</span></div>
           <div id="msg"></div>
@@ -604,7 +604,7 @@ function hashText(x){let h=2166136261>>>0;const s=String(x||'');for(let i=0;i<s.
 function checkpointSeed(st){return JSON.stringify({title:st.title,architectureReady:!!st.architectureReady,storyArc:st.storyArc,cast:st.cast,relationships:st.relationships,scenePlan:st.scenePlan,sceneMemory:st.sceneMemory,sceneLog:st.sceneLog,sofar:st.sofar,threads:st.threads,planted:st.planted||[],ending:st.ending,chapters:(st.chapters||[]).map(c=>({n:c.n,title:c.title,sceneId:c.sceneId||'',sceneTitle:c.sceneTitle||'',prose:c.prose}))});}
 function ensureCheckpoint(st){st=st||S;if(st.checkpoint&&typeof st.checkpoint==='object'&&String(st.checkpoint.id||'').trim())return st.checkpoint;const n=(st.chapters||[]).length;if(st.architectureReady||n){st.checkpoint={id:'legacy-'+String(n).padStart(4,'0')+'-'+hashText(checkpointSeed(st)),seq:n+1,chapter:n,phase:'legacy-import',at:''};}else st.checkpoint={id:'root',seq:0,chapter:0,phase:'root',at:''};return st.checkpoint;}
 function advanceCheckpoint(phase){const prior=ensureCheckpoint(S),seq=num(prior.seq,0)+1;S.checkpoint={id:'cp-'+String(seq).padStart(4,'0')+'-'+hashText(checkpointSeed(S)),seq,chapter:(S.chapters||[]).length,phase:String(phase||'record'),at:new Date().toISOString()};return S.checkpoint;}
-function checkpointEnvelope(st){st=st||S;const cp=ensureCheckpoint(st);return {kind:'lantern_checkpoint',format:1,reply_protocol:REPLY_PROTOCOL,checkpoint:Object.assign({},cp),resume:{next_phase:st.architectureReady?'chapter':'architecture',next_chapter:(st.chapters||[]).length+1},state:Object.assign({},st,{prompt:''})};}
+function checkpointEnvelope(st){st=st||S;const cp=ensureCheckpoint(st);return {kind:'lantern_checkpoint',v:'lantern_2',format:1,reply_protocol:REPLY_PROTOCOL,checkpoint:Object.assign({},cp),resume:{next_phase:st.architectureReady?'chapter':'architecture',next_chapter:(st.chapters||[]).length+1},state:Object.assign({},st,{prompt:''})};}
 function checkpointState(o){return o&&o.kind==='lantern_checkpoint'&&o.state&&typeof o.state==='object'?o.state:null;}
 function downloadCheckpoint(){readUI();ensureCheckpoint(S);const out=checkpointEnvelope(S),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));a.download='checkpoint-latest.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1200);toast('Checkpoint downloaded: '+out.checkpoint.id);}
 
@@ -731,7 +731,7 @@ function checkReply(obj,budget,wantSVG,slate,phase){
     else{
       if(!/^<svg[\s>]/i.test(svg))warn.push('illustration is not raw <svg>');
       if(!/<\/svg>$/i.test(svg))fail.push('the SVG is truncated — no closing </svg>');
-      const ext=svg.replace(/xmlns(:\w+)?\s*=\s*"[^"]*"/gi,'');
+      const ext=svg.replace(/xmlns(:\w+)?\s*=\s*(["'])[^"']*\2/gi,'');
       if(/<text[\s>]|<image[\s>]|<script[\s>]|<foreignObject|xlink:href|https?:\/\/|url\(\s*['"]?http/i.test(ext))warn.push('SVG breaks the brief (text, raster, script or external reference)');}}
   return {fail,warn};}
 
@@ -1280,7 +1280,7 @@ function testPaste(quiet){
   const phase=S.architectureReady?'chapter':'architecture';
   const c=checkReply(r.obj,S.cbudget,S.illus!=='none',{n:phase==='architecture'?Math.max(S.sceneN,S.planN):S.sceneN,w:S.sceneW,histBudget:S.sceneHistoryBudget,plan:S.scenePlan,allowedChosenId:(S.sceneChosen||{}).id||'',checkpoint:ensureCheckpoint(S).id},phase);
   const ch=r.obj.chapter||{};
-  const iS=r.text.indexOf('\"scene_choice\"'), iP=r.text.indexOf('\"plan\"'), iC=r.text.indexOf('\"chapter\"');
+  const iS=r.text.indexOf('"scene_choice":'), iP=r.text.indexOf('"plan":'), iC=r.text.indexOf('"chapter":');
   const orderOK=phase==='architecture'?true:(iS>=0&&iP>=0&&iC>=0&&iS<iP&&iP<iC);
   const facts=phase==='architecture'
     ?['strict JSON object; no wrapper or repair',
@@ -1296,7 +1296,11 @@ function testPaste(quiet){
   if(c.fail.length){
     verified=null;setGate('no','failed the checks');
     m.innerHTML='<div class="msg no"><b>'+esc(phase==='architecture'?'Parses, but the story map is incomplete.':'Parses, but it is not a complete scene-driven chapter.')+'</b><ul>'+
-      c.fail.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>';
+      c.fail.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>'+
+      '<div class="diag">'+esc('expected parent_checkpoint: '+ensureCheckpoint(S).id+
+        '\nreply parent_checkpoint: '+String(r.obj.parent_checkpoint||'(absent)')+
+        '\nledger: '+(S.scenePlan||[]).map(x=>x.id+':'+x.status).join(' '))+'</div>'+
+      '<div class="msg"><b>If the only complaint is the checkpoint</b>Press Stamp checkpoint to write the expected id into the pasted reply.</div>';
     if(!quiet)toast(phase==='architecture'?'Parsed, but the story map is incomplete':'Parsed, but the chapter is incomplete');
     return false;}
   verified={raw,obj:r.obj,fixes:r.fixes,orderOK};
@@ -1713,6 +1717,19 @@ $('#copy').onclick=()=>{if(!S.prompt)return toast('Build it first.');
 $('#schema').onclick=()=>navigator.clipboard.writeText(JSON.stringify(schema(S.architectureReady?S.chapters.length+1:0,S.architectureReady?'chapter':'architecture'),null,2))
   .then(()=>toast('Schema copied')).catch(()=>toast('Copy blocked.'));
 $('#test').onclick=()=>testPaste(false);
+$('#stamp').onclick=()=>{
+  const raw=$('#paste').value.trim();
+  if(!raw)return toast('Paste the reply first.');
+  const want=ensureCheckpoint(S).id;
+  let out=null;
+  try{const o=JSON.parse(raw);
+    if(!o||typeof o!=='object'||Array.isArray(o))throw 0;
+    o.parent_checkpoint=want;out=JSON.stringify(o,null,2);}
+  catch(x){
+    if(/"parent_checkpoint"\s*:\s*"[^"]*"/.test(raw))
+      out=raw.replace(/"parent_checkpoint"\s*:\s*"[^"]*"/,'"parent_checkpoint": '+JSON.stringify(want));}
+  if(out===null)return toast('No parent_checkpoint field found to stamp.');
+  $('#paste').value=out;invalidate();testPaste(false);toast('Stamped '+want);};
 $('#record').onclick=record;
 let pt=null;
 $('#paste').addEventListener('input',()=>{invalidate();clearTimeout(pt);pt=setTimeout(()=>testPaste(true),450);});
@@ -1739,9 +1756,14 @@ $('#dl').onclick=download; $('#dltxt').onclick=exportText;$$('[data-dlcp]').forE
 $('#dlhtml').onclick=exportHTML; $('#html2').onclick=exportHTML; $('#html3').onclick=exportHTML;
 $('#up').onclick=()=>$('#upf').click();
 $('#upf').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const o=JSON.parse(String(r.result));if(!o||!o.v)throw 0;
-    if(!applyState(o))throw 0;toast(checkpointState(o)?'Checkpoint loaded':'Save loaded');}
-    catch(x){toast('That is not a Lantern save or checkpoint file.');}};
+  r.onload=()=>{const txt=String(r.result);let o=null;
+    try{o=JSON.parse(txt);}catch(x){return toast('That file is not valid JSON.');}
+    if(o&&o.protocol===REPLY_PROTOCOL){
+      $('#paste').value=txt;invalidate();showRead();testPaste(false);
+      return toast('Model reply loaded into the paste box.');}
+    if(o&&(o.v||o.kind==='lantern_checkpoint')&&applyState(o))
+      return toast(checkpointState(o)?'Checkpoint loaded':'Save loaded');
+    toast('Not a Lantern save, checkpoint, or reply file.');};
   r.readAsText(f);e.target.value='';};
 $('#reset').onclick=()=>{if(!confirm('Clear the whole book? Download first if you want it.'))return;
   S=JSON.parse(JSON.stringify(BLANK));ensureCheckpoint(S);save();renderAll();invalidate();$('#msg').innerHTML='';toast('Reset');};
