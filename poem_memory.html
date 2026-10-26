@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Prymis Recitation Probe v0.2 — extended blind-memory instrument</title>
+<style>
+:root{
+  --ink:#0b0f14; --slate:#131a22; --slate2:#1b242e; --rule:#263241; --rule2:#334255;
+  --measured:#4fd1c5; --mid:#7fa8b8; --judged:#d9a441;
+  --paper:#e6edf3; --mute:#7c8b9a; --dim:#5b6b7a;
+  --fire:#e05a47; --go:#5ec27a; --gap:#6b7280;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--ink);color:var(--paper);font-family:var(--sans);line-height:1.55;font-size:15px}
+.eyebrow{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+header{position:sticky;top:0;z-index:60;background:rgba(11,15,20,.94);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--rule);padding:14px 20px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+header h1{font-family:var(--mono);font-size:1.05rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
+header h1 span{color:var(--measured)}
+header h1 em{font-style:normal;font-size:.58rem;letter-spacing:.08em;color:var(--dim);margin-left:7px;font-weight:500}
+header .tagline{font-size:.82rem;color:var(--mute);flex:1;min-width:200px}
+.readout{font-family:var(--mono);font-size:.78rem;color:var(--mute);white-space:nowrap}
+.readout b{color:var(--paper);font-weight:600}
+nav{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--rule);background:var(--ink);
+  position:sticky;top:57px;z-index:55;overflow-x:auto}
+nav button{font-family:var(--mono);font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;
+  background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);padding:12px 14px;cursor:pointer;white-space:nowrap}
+nav button:hover{color:var(--paper)}
+nav button[aria-selected="true"]{color:var(--measured);border-bottom-color:var(--measured)}
+main{max-width:1500px;margin:0 auto;padding:20px}
+.view{display:none}.view.on{display:block}
+.card{background:var(--slate);border:1px solid var(--rule);border-radius:4px;margin-bottom:18px;min-width:0;max-width:100%}
+.card > h2{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);
+  padding:11px 16px;border-bottom:1px solid var(--rule);font-weight:500;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.card .body{padding:16px}
+.card .body > * + *{margin-top:12px}
+p.note{font-size:.85rem;color:var(--mute)}
+p.note code{font-family:var(--mono);font-size:.8rem;color:var(--mid)}
+a{color:var(--measured)}
+button.act{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--rule2);background:var(--slate2);color:var(--paper);padding:9px 14px;border-radius:3px;cursor:pointer}
+button.act:hover{border-color:var(--measured);color:var(--measured)}
+button.act.primary{background:var(--measured);border-color:var(--measured);color:#06231f;font-weight:700}
+button.act.primary:hover{background:#66e0d4;color:#06231f}
+button.act.warn:hover{border-color:var(--fire);color:var(--fire)}
+button.act:disabled{opacity:.4;cursor:not-allowed}
+button.act:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible,nav button:focus-visible{
+  outline:2px solid var(--measured);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+textarea,input,select{width:100%;background:var(--ink);border:1px solid var(--rule);border-radius:3px;
+  color:var(--paper);padding:10px;font-family:var(--mono);font-size:.82rem}
+textarea{resize:vertical;min-height:120px;line-height:1.5}
+textarea.tall{min-height:320px}
+label.field{display:block}
+label.field span{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--mute);margin-bottom:5px}
+pre.out{background:var(--ink);border:1px solid var(--rule);border-radius:3px;padding:14px;
+  font-family:var(--mono);font-size:.74rem;line-height:1.55;color:var(--mute);
+  max-height:560px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{font-family:var(--mono);font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);
+  text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);font-weight:500}
+td{padding:9px 10px;border-bottom:1px solid rgba(38,50,65,.55);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.tick{font-family:var(--mono);font-weight:600;letter-spacing:.03em}
+.chip{display:inline-block;font-family:var(--mono);font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 7px;border-radius:2px;border:1px solid var(--rule2);color:var(--mute);white-space:nowrap}
+.chip.m{border-color:rgba(79,209,197,.5);color:var(--measured)}
+.chip.j{border-color:rgba(217,164,65,.5);color:var(--judged)}
+.chip.f{border-color:rgba(224,90,71,.6);color:var(--fire)}
+.chip.g{border-color:rgba(94,194,122,.5);color:var(--go)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--rule)}
+.kpi{background:var(--slate);padding:12px 14px}
+.kpi .k{font-family:var(--mono);font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+.kpi .v{font-family:var(--mono);font-size:1.22rem;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums}
+.kpi .s{font-family:var(--mono);font-size:.66rem;color:var(--mute);margin-top:2px}
+.kpis.small{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.kpis.small .kpi{padding:9px 11px}
+.kpis.small .kpi .v{font-size:1rem}
+.msg{border-left:2px solid var(--rule2);padding:9px 12px;font-size:.84rem;color:var(--mute);background:rgba(27,36,46,.5);overflow-wrap:anywhere}
+.msg.go{border-left-color:var(--go)} .msg.warn{border-left-color:var(--judged)} .msg.stop{border-left-color:var(--fire)}
+.msg b{color:var(--paper);font-weight:600}
+.msg .why{display:block;margin-top:3px;font-family:var(--mono);font-size:.72rem;color:var(--dim)}
+.empty{font-size:.85rem;color:var(--dim);font-style:italic;padding:6px 0}
+details{border:1px solid var(--rule);border-radius:3px;background:var(--ink);margin-top:12px}
+details > summary{cursor:pointer;padding:9px 12px;font-family:var(--mono);font-size:.72rem;
+  letter-spacing:.08em;color:var(--mute);list-style:none}
+details > summary::-webkit-details-marker{display:none}
+details > summary::before{content:"▸ ";color:var(--dim)}
+details[open] > summary::before{content:"▾ "}
+details > summary:hover{color:var(--paper)}
+details .inner{padding:0 12px 12px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,26px);opacity:0;pointer-events:none;
+  background:var(--slate2);border:1px solid var(--rule2);border-left:3px solid var(--measured);
+  color:var(--paper);font-family:var(--mono);font-size:.76rem;padding:11px 16px;border-radius:3px;z-index:99;
+  transition:opacity .18s,transform .18s;max-width:90vw}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.bad{border-left-color:var(--fire)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:.66rem;color:var(--dim);margin-top:10px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+/* line heat */
+.line-heat{display:flex;gap:2px;flex-wrap:wrap;margin:8px 0}
+.line-heat .cell{width:22px;height:22px;border-radius:2px;border:1px solid var(--rule);position:relative}
+.line-heat .cell.exact{background:rgba(94,194,122,.55);border-color:rgba(94,194,122,.9)}
+.line-heat .cell.altered{background:rgba(217,164,65,.45);border-color:rgba(217,164,65,.8)}
+.line-heat .cell.missing{background:rgba(224,90,71,.45);border-color:rgba(224,90,71,.8)}
+.line-heat .cell.gap{background:rgba(107,114,128,.35);border-color:rgba(107,114,128,.7)}
+.line-heat .cell.inserted{background:rgba(127,168,184,.35);border-color:rgba(127,168,184,.7)}
+.line-heat .cell:hover{outline:1px solid var(--paper)}
+.line-detail{margin-top:10px}
+.line-detail table{font-size:.8rem}
+.line-detail td.recit{font-family:"Georgia","Times New Roman",serif;font-size:.88rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.diff-del{background:rgba(224,90,71,.22);color:#ff9aac;text-decoration:line-through;border-radius:2px;padding:0 1px}
+.diff-ins{background:rgba(94,194,122,.18);color:#9ae5b5;border-radius:2px;padding:0 1px}
+.diff-eq{color:var(--paper)}
+.poem-block{background:var(--slate);border:1px solid var(--rule);border-radius:4px;margin-bottom:18px}
+.poem-block > h3{font-family:var(--mono);font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:11px 16px;border-bottom:1px solid var(--rule);font-weight:600;color:var(--paper);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.poem-block > h3 em{font-style:normal;font-family:var(--mono);font-size:.66rem;color:var(--mute);letter-spacing:.06em;font-weight:400}
+.poem-block .body{padding:16px}
+.poem-block .body > * + *{margin-top:12px}
+/* code similarity matrix */
+.matrix{display:grid;gap:1px;font-family:var(--mono);font-size:.7rem}
+.matrix .hdr{background:var(--slate2);padding:6px;text-align:center;color:var(--mute);font-weight:600}
+.matrix .cell{padding:6px;text-align:center;background:var(--slate);border:1px solid var(--rule);color:var(--paper)}
+.matrix .cell.diag{background:var(--slate2);color:var(--dim)}
+.matrix .cell.hi{background:rgba(94,194,122,.25);color:#9ae5b5}
+.matrix .cell.mid{background:rgba(217,164,65,.2);color:#f0c674}
+.matrix .cell.lo{background:rgba(224,90,71,.15);color:#ff9aac}
+</style>
+</head>
+<body>
+<header>
+  <h1>Prymis <span>Recitation Probe</span> <em>v0.2</em></h1>
+  <div class="tagline">Blind-memory recitation · nine poems · character diff · code-similarity forensics.</div>
+  <div class="readout">Probes <b id="hd-count">0</b> · Last recall <b id="hd-recall">—</b> · Mean conf <b id="hd-conf">—</b></div>
+</header>
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-view="payload">Payload</button>
+  <button role="tab" aria-selected="false" data-view="trap">Trap</button>
+  <button role="tab" aria-selected="false" data-view="compare">Compare</button>
+  <button role="tab" aria-selected="false" data-view="codes">Code Similarity</button>
+  <button role="tab" aria-selected="false" data-view="ledger">Ledger</button>
+  <button role="tab" aria-selected="false" data-view="data">Data</button>
+</nav>
+<main>
+
+<!-- ═══════════════ PAYLOAD ═══════════════ -->
+<section class="view on" data-view="payload">
+  <div class="card">
+    <h2><span>Payload — copy into a fresh model session</span><span class="eyebrow" id="payload-status">—</span></h2>
+    <div class="body">
+      <p class="note">This is the exact prompt to send. It does <b style="color:var(--paper)">not</b> include the verbatim originals — the host holds those. The model must recite from memory under a no-tool constraint. Paste the JSON reply in the <b style="color:var(--paper)">Trap</b> tab.</p>
+      <div class="row">
+        <label class="field" style="flex:1;min-width:200px;margin:0"><span>Model identity</span>
+          <input id="model-id" type="text" placeholder="model/version" value=""></label>
+        <label class="field" style="width:150px;margin:0"><span>Date (UTC)</span>
+          <input id="probe-date" type="date"></label>
+      </div>
+      <div class="row">
+        <button class="act primary" id="btn-copy-payload">Copy payload</button>
+        <button class="act" id="btn-download-payload">Download as .txt</button>
+        <button class="act" id="btn-refresh-payload">Rebuild with current date</button>
+      </div>
+      <pre id="payload-out" class="out">—</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ TRAP ═══════════════ -->
+<section class="view" data-view="trap">
+  <div class="card">
+    <h2>Trap — paste the model's JSON reply</h2>
+    <div class="body">
+      <label class="field"><span>Model reply (raw JSON, fenced block, or wrapped in prose)</span>
+        <textarea id="trap-paste" class="tall" placeholder="Paste the full reply here."></textarea>
+      </label>
+      <div class="row">
+        <button class="act primary" id="btn-trap-record">Validate + record probe</button>
+        <button class="act" id="btn-trap-clear">Clear</button>
+        <button class="act" id="btn-trap-example">Load example</button>
+      </div>
+      <div id="trap-msg"></div>
+      <details>
+        <summary>Raw parsed JSON (inspect before recording)</summary>
+        <div class="inner"><pre id="trap-raw" class="out" style="max-height:340px">—</pre></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ COMPARE ═══════════════ -->
+<section class="view" data-view="compare">
+  <div class="card">
+    <h2><span>Probe <span id="compare-id">—</span></span><span class="eyebrow" id="compare-meta">no probe selected</span></h2>
+    <div class="body">
+      <div class="kpis" id="compare-kpis"><p class="empty" style="grid-column:1/-1">Record a probe to see the analysis.</p></div>
+    </div>
+  </div>
+  <div id="compare-poems"></div>
+</section>
+
+<!-- ═══════════════ CODES ═══════════════ -->
+<section class="view" data-view="codes">
+  <div class="card">
+    <h2><span>Code similarity — random codes compared</span><span class="eyebrow" id="codes-meta">no probe</span></h2>
+    <div class="body">
+      <p class="note">Each poem is assigned a random alphanumeric code by the model. The matrix below shows <b style="color:var(--paper)">Levenshtein similarity</b> between every pair of codes. High similarity between codes for similar poems suggests the model's “random” generation is not uniformly random — a possible sign of special placement or latent structure. Low similarity everywhere is consistent with genuine randomness.</p>
+      <div id="codes-matrix"></div>
+      <div id="codes-summary"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ LEDGER ═══════════════ -->
+<section class="view" data-view="ledger">
+  <div class="card">
+    <h2>Probe ledger</h2>
+    <div class="body" id="ledger-table"><p class="empty">No probes recorded yet.</p></div>
+  </div>
+  <div class="card">
+    <h2>Calibration — stated confidence vs measured recall</h2>
+    <div class="body">
+      <div id="calibration-chart"></div>
+      <p class="note">A well-calibrated model sits near the diagonal. Points below are overconfident; above are underconfident.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ DATA ═══════════════ -->
+<section class="view" data-view="data">
+  <div class="card">
+    <h2>Backup</h2>
+    <div class="body">
+      <p class="note">Browser storage is best-effort. Download the state file before closing the tab.</p>
+      <div class="row">
+        <button class="act primary" id="btn-download-state">Download state</button>
+        <button class="act" id="btn-restore-open">Restore from file</button>
+        <input type="file" id="restore-file" accept=".json,application/json" style="display:none">
+        <button class="act warn" id="btn-reset">Reset</button>
+      </div>
+      <div id="storage-msg"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Exact originals (ground truth)</h2>
+    <div class="body">
+      <p class="note">Verbatim texts used for diffing. Embedded here so the device works offline and the diff is reproducible.</p>
+      <div id="originals-list"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>How the analysis works</h2>
+    <div class="body">
+      <p class="note"><b style="color:var(--paper)">Line alignment.</b> Each original line is matched greedily to the recitation, with a one-line lookahead to recover from a missing or inserted line. A [GAP] marker occupies a line and is preserved as a gap.</p>
+      <p class="note"><b style="color:var(--paper)">Similarity.</b> Character similarity is <code>2·LCS(a,b) / (|a|+|b|)</code> after whitespace normalization and quote folding.</p>
+      <p class="note"><b style="color:var(--paper)">Code similarity.</b> Levenshtein distance is computed between every pair of random codes; similarity is <code>1 - distance / max(len)</code>. A high average similarity across all pairs is a signal that the codes are not uniformly random.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ════════════════════════════════════════════════════════════════
+   EXACT ORIGINALS — public domain, embedded for offline diffing.
+   ════════════════════════════════════════════════════════════════ */
+const POEMS = {
+  kraken: {
+    id: 'kraken_tennyson',
+    title: 'The Kraken',
+    author: 'Alfred, Lord Tennyson',
+    year: 1830,
+    text: `Below the thunders of the upper deep,
+Far, far beneath in the abysmal sea,
+His ancient, dreamless, uninvaded sleep
+The Kraken sleepeth: faintest sunlights flee
+About his shadowy sides; above him swell
+Huge sponges of millennial growth and height;
+And far away into the sickly light,
+From many a wondrous grot and secret cell
+Unnumbered and enormous polypi
+Winnow with giant arms the slumbering green.
+There hath he lain for ages, and will lie
+Battening upon huge sea-worms in his sleep,
+Until the latter fire shall heat the deep;
+Then once by men and angels to be seen,
+In roaring he shall rise and on the surface die.`
+  },
+  darkling: {
+    id: 'darkling_thrush_hardy',
+    title: 'The Darkling Thrush',
+    author: 'Thomas Hardy',
+    year: 1900,
+    text: `I leant upon a coppice gate
+When Frost was spectre-gray,
+And Winter's dregs made desolate
+The weakening eye of day.
+The tangled bine-stems scored the sky
+Like strings of broken lyres,
+And all mankind that haunted nigh
+Had sought their household fires.
+
+The land's sharp features seemed to be
+The Century's corpse outleant,
+His crypt the cloudy canopy,
+The wind his death-lament.
+The ancient pulse of germ and birth
+Was shrunken hard and dry,
+And every spirit upon earth
+Seemed fervourless as I.
+
+At once a voice arose among
+The bleak twigs overhead
+In a full-hearted evensong
+Of joy illimited;
+An aged thrush, frail, gaunt, and small,
+In blast-beruffled plume,
+Had chosen thus to fling his soul
+Upon the growing gloom.
+
+So little cause for carolings
+Of such ecstatic sound
+Was written on terrestrial things
+Afar or nigh around,
+That I could think there trembled through
+His happy good-night air
+Some blessed Hope, whereof he knew
+And I was unaware.`
+  },
+  dylan: {
+    id: 'do_not_go_gentle_thomas',
+    title: 'Do not go gentle into that good night',
+    author: 'Dylan Thomas',
+    year: 1952,
+    text: `Do not go gentle into that good night,
+Old age should burn and rave at close of day;
+Rage, rage against the dying of the light.
+
+Though wise men at their end know dark is right,
+Because their words had forked no lightning they
+Do not go gentle into that good night.
+
+Good men, the last wave by, crying how bright
+Their frail deeds might have danced in a green bay,
+Rage, rage against the dying of the light.
+
+Wild men who caught and sang the sun in flight,
+And learn, too late, they grieved it on its way,
+Do not go gentle into that good night.
+
+Grave men, near death, who see with blinding sight
+Blind eyes could blaze like meteors and be gay,
+Rage, rage against the dying of the light.
+
+And you, my father, there on the sad height,
+Curse, bless, me now with your fierce tears, I pray.
+Do not go gentle into that good night.
+Rage, rage against the dying of the light.`
+  },
+  frost_on_going: {
+    id: 'on_going_unnoticed_frost',
+    title: 'On Going Unnoticed',
+    author: 'Robert Frost',
+    year: 1930,
+    text: `As vain to raise a voice as a sigh
+In the tumult of free leaves on high.
+What are you in the shadow of trees
+Engaged up there with the light and breeze?
+Less than the coral-root you know
+That is content with the daylight low,
+And has no leaves at all of its own;
+Whose spotted flowers hang meanly down.
+You grasp the bark by a rugged pleat,
+And look up small from the forest’s feet.
+The only leaf it drops goes wide,
+Your name not written on either side.
+You linger your little hour and are gone,
+And still the woods sweep leafily on,
+Not even missing the coral-root flower
+You took as a trophy of the hour.`
+  },
+  frost_for_once: {
+    id: 'for_once_then_something_frost',
+    title: 'For Once, Then, Something',
+    author: 'Robert Frost',
+    year: 1923,
+    text: `Others taunt me with having knelt at well-curbs
+Always wrong to the light, so never seeing
+Deeper down in the well than where the water
+Gives me back in a shining surface picture
+Me myself in the summer heaven godlike
+Looking out of a wreath of fern and cloud puffs.
+Once, when trying with chin against a well-curb,
+I discerned, as I thought, beyond the picture,
+Through the picture, a something white, uncertain,
+Something more of the depths—and then I lost it.
+Water came to rebuke the too clear water.
+One drop fell from a fern, and lo, a ripple
+Shook whatever it was lay there at bottom,
+Blurred it, blotted it out. What was that whiteness?
+Truth? A pebble of quartz? For once, then, something.`
+  },
+  stevens_gubbinal: {
+    id: 'gubbinal_stevens',
+    title: 'Gubbinal',
+    author: 'Wallace Stevens',
+    year: 1923,
+    text: `That strange flower, the sun,
+Is just what you say.
+Have it your way.
+
+The world is ugly,
+And the people are sad.
+
+That tuft of jungle feathers,
+That animal eye,
+Is just what you say.
+
+That savage of fire,
+That seed,
+Have it your way.
+
+The world is ugly,
+And the people are sad.`
+  },
+  dickinson_victory: {
+    id: 'victory_comes_late_dickinson',
+    title: 'Victory comes late',
+    author: 'Emily Dickinson',
+    year: 1875,
+    text: `Victory comes late –
+And is held low to freezing lips –
+Too rapt with frost
+To take it –
+How sweet it would have tasted –
+Just a Drop –
+Was God so economical?
+His Table's spread too high for Us –
+Unless We dine on Tiptoe –
+Crumbs – fit such little mouths –
+Cherries – suit Robins –
+The Eagle's Golden Breakfast strangles – Them –
+God keep His Oath to Sparrows –
+Who of little Love – know how to starve –`
+  },
+  dickinson_route: {
+    id: 'route_of_evanescence_dickinson',
+    title: 'A Route of Evanescence',
+    author: 'Emily Dickinson',
+    year: 1880,
+    text: `A Route of Evanescence
+With a revolving Wheel --
+A Resonance of Emerald --
+A Rush of Cochineal --
+And every Blossom on the Bush
+Adjusts its tumbled Head --
+The mail from Tunis, probably,
+An easy Morning's Ride --`
+  },
+  whitman_glimpse: {
+    id: 'a_glimpse_whitman',
+    title: 'A Glimpse',
+    author: 'Walt Whitman',
+    year: 1872,
+    text: `A glimpse through an interstice caught,
+Of a crowd of workmen and drivers in a bar-room around the stove late of a winter night, and I unremark’d seated in a corner,
+Of a youth who loves me and whom I love, silently approaching and seating himself near, that he may hold me by the hand,
+A long while amid the noises of coming and going, of drinking and oath and smutty jest,
+There we two, content, happy in being together, speaking little, perhaps not a word.`
+  },
+  williams_nantucket: {
+    id: 'nantucket_williams',
+    title: 'Nantucket',
+    author: 'William Carlos Williams',
+    year: 1934,
+    text: `Flowers through the window
+lavender and yellow
+changed by white curtains―
+Smell of cleanliness―
+Sunshine of late afternoon―
+On the glass tray
+a glass pitcher, the tumbler
+turned down, by which
+a key is lying―And the
+immaculate white bed`
+  }
+};
+
+/* ════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════ */
+const STORAGE_KEY = 'prymis_recitation_v0_2';
+const VERSION = 'prymis_recitation_0_2';
+
+const BLANK = { version: VERSION, probes: [] };
+let state = JSON.parse(JSON.stringify(BLANK));
+let lastParsed = null;
+let currentProbeId = null;
+
+/* ════════════════════════════════════════════════════════════════
+   DOM HELPERS
+   ════════════════════════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad2 = n => String(n).padStart(2,'0');
+const todayUTC = () => { const d=new Date(); return d.getUTCFullYear()+'-'+pad2(d.getUTCMonth()+1)+'-'+pad2(d.getUTCDate()); };
+
+function toast(m, bad){
+  const t = $('#toast');
+  t.textContent = m; t.className = 'on' + (bad ? ' bad' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>{ t.className=''; }, 3400);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TEXT NORMALIZATION AND DIFF
+   ════════════════════════════════════════════════════════════════ */
+function normalizeForDiff(s){
+  return String(s)
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2013\u2014]/g, '--')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .trim();
+}
+function strictNormalize(s){
+  return String(s).replace(/\r\n?/g,'\n').replace(/[ \t]+/g,' ');
+}
+function linesOf(s){
+  return String(s || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(l => l.replace(/[ \t]+/g, ' ').trim())
+    .filter(l => l.length > 0);
+}
+
+function lcsLength(a, b){
+  const n = a.length, m = b.length;
+  if (n === 0 || m === 0) return 0;
+  if (n * m > 4_000_000) return Math.min(n, m) * 0.5;
+  let prev = new Uint16Array(m + 1);
+  let curr = new Uint16Array(m + 1);
+  for (let i = 1; i <= n; i++){
+    const ca = a.charCodeAt(i-1);
+    for (let j = 1; j <= m; j++){
+      if (ca === b.charCodeAt(j-1)) curr[j] = prev[j-1] + 1;
+      else curr[j] = prev[j] >= curr[j-1] ? prev[j] : curr[j-1];
+    }
+    const tmp = prev; prev = curr; curr = tmp;
+    curr.fill(0);
+  }
+  return prev[m];
+}
+function charSimilarity(a, b){
+  if (a === b) return 1;
+  if (!a || !b) return 0;
+  return (2 * lcsLength(a, b)) / (a.length + b.length);
+}
+
+function charDiff(a, b){
+  const n = a.length, m = b.length;
+  if (n === 0) return b ? [{type:'ins', text:b}] : [];
+  if (m === 0) return [{type:'del', text:a}];
+  if (n * m > 9_000_000) return [{type:'eq', text:'[input too large]'}];
+  const dp = Array.from({length:n+1}, ()=>new Uint16Array(m+1));
+  for (let i = 1; i <= n; i++){
+    const ca = a.charCodeAt(i-1);
+    for (let j = 1; j <= m; j++){
+      if (ca === b.charCodeAt(j-1)) dp[i][j] = dp[i-1][j-1] + 1;
+      else dp[i][j] = dp[i-1][j] >= dp[i][j-1] ? dp[i-1][j] : dp[i][j-1];
+    }
+  }
+  const ops = [];
+  let i = n, j = m;
+  while (i > 0 || j > 0){
+    if (i > 0 && j > 0 && a[i-1] === b[j-1]){ ops.push({type:'eq', ch:a[i-1]}); i--; j--; }
+    else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])){ ops.push({type:'ins', ch:b[j-1]}); j--; }
+    else { ops.push({type:'del', ch:a[i-1]}); i--; }
+  }
+  ops.reverse();
+  const merged = [];
+  for (const op of ops){
+    const last = merged[merged.length-1];
+    if (last && last.type === op.type) last.text += op.ch;
+    else merged.push({type: op.type, text: op.ch});
+  }
+  return merged;
+}
+
+function renderCharDiff(original, recitation){
+  const a = normalizeForDiff(original);
+  const b = normalizeForDiff(recitation);
+  return charDiff(a, b).map(op => {
+    if (op.type === 'eq') return `<span class="diff-eq">${esc(op.text)}</span>`;
+    if (op.type === 'ins') return `<span class="diff-ins">${esc(op.text)}</span>`;
+    return `<span class="diff-del">${esc(op.text)}</span>`;
+  }).join('');
+}
+
+function alignLines(origText, recitText){
+  const O = linesOf(origText);
+  const R = linesOf(recitText);
+  const result = [];
+  let oi = 0, ri = 0;
+  while (oi < O.length || ri < R.length){
+    if (oi >= O.length){
+      result.push({ kind:'inserted', recit:R[ri], recitIdx:ri, similarity:0 });
+      ri++; continue;
+    }
+    if (ri >= R.length){
+      result.push({ kind:'missing', orig:O[oi], origIdx:oi, similarity:0 });
+      oi++; continue;
+    }
+    const o = O[oi], r = R[ri];
+    if (/^\[gap\]$/i.test(r)){
+      result.push({ kind:'gap', orig:o, recit:r, origIdx:oi, recitIdx:ri, similarity:0 });
+      oi++; ri++; continue;
+    }
+    const s = charSimilarity(normalizeForDiff(o), normalizeForDiff(r));
+    if (s >= 0.5){
+      result.push({ kind: s >= 0.999 ? 'exact' : 'altered', orig:o, recit:r, origIdx:oi, recitIdx:ri, similarity:s });
+      oi++; ri++; continue;
+    }
+    const sNextO = (oi+1 < O.length) ? charSimilarity(normalizeForDiff(O[oi+1]), normalizeForDiff(r)) : 0;
+    const sNextR = (ri+1 < R.length) ? charSimilarity(normalizeForDiff(o), normalizeForDiff(R[ri+1])) : 0;
+    if (sNextR > sNextO && sNextR > 0.5){
+      result.push({ kind:'inserted', recit:r, recitIdx:ri, similarity:0 });
+      ri++;
+    } else if (sNextO > 0.5){
+      result.push({ kind:'missing', orig:o, origIdx:oi, similarity:0 });
+      oi++;
+    } else {
+      result.push({ kind:'altered', orig:o, recit:r, origIdx:oi, recitIdx:ri, similarity:s });
+      oi++; ri++;
+    }
+  }
+  return result;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PROBE ANALYSIS
+   ════════════════════════════════════════════════════════════════ */
+function analyzePoem(original, recitation){
+  const a = strictNormalize(original);
+  const b = strictNormalize(recitation || '');
+  const an = normalizeForDiff(original);
+  const bn = normalizeForDiff(recitation || '');
+  const strictSim = (a.length + b.length) ? (2 * lcsLength(a, b)) / (a.length + b.length) : 0;
+  const normSim   = (an.length + bn.length) ? (2 * lcsLength(an, bn)) / (an.length + bn.length) : 0;
+  const alignment = alignLines(original, recitation || '');
+  const counts = { exact:0, altered:0, missing:0, gap:0, inserted:0 };
+  alignment.forEach(r => { counts[r.kind] = (counts[r.kind] || 0) + 1; });
+  const origLineCount = linesOf(original).length;
+  const lineRecall = origLineCount ? (counts.exact + counts.altered) / origLineCount : 0;
+  return { strictSim, normSim, alignment, counts, origLineCount, lineRecall, diffHtml: renderCharDiff(original, recitation || '') };
+}
+
+function analyzeProbe(parsed){
+  const out = { probe_meta: parsed.probe_meta || {}, poems: [] };
+  for (const key of Object.keys(POEMS)){
+    const P = POEMS[key];
+    const entry = (parsed.poems || []).find(p => p && p.poem_id === P.id) || null;
+    if (!entry){
+      out.poems.push({ poem: P, entry:null, analysis: analyzePoem(P.text, ''), missing:true });
+      continue;
+    }
+    out.poems.push({ poem: P, entry, analysis: analyzePoem(P.text, entry.recitation || ''), missing:false });
+  }
+  const recalls = out.poems.map(p => p.analysis.normSim);
+  const confidences = out.poems.map(p => p.entry ? Number(p.entry.confidence) : 0);
+  out.overallRecall = recalls.reduce((a,b)=>a+b,0) / (recalls.length || 1);
+  out.meanConfidence = confidences.reduce((a,b)=>a+b,0) / (confidences.length || 1);
+  out.gapCount = out.poems.reduce((a,p)=>a+(p.analysis.counts.gap||0),0);
+  out.uncertainCount = out.poems.reduce((a,p)=>a+(p.entry && Array.isArray(p.entry.uncertain_lines) ? p.entry.uncertain_lines.length : 0),0);
+  return out;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   CODE SIMILARITY
+   ════════════════════════════════════════════════════════════════ */
+function levenshtein(a, b){
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp = Array.from({length:m+1}, () => new Uint16Array(n+1));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++){
+    for (let j = 1; j <= n; j++){
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i-1][j] + 1, dp[i][j-1] + 1, dp[i-1][j-1] + cost);
+    }
+  }
+  return dp[m][n];
+}
+function codeSimilarity(a, b){
+  if (!a || !b) return 0;
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshtein(a, b) / maxLen;
+}
+
+function renderCodeMatrix(probe){
+  const host = $('#codes-matrix');
+  const summaryHost = $('#codes-summary');
+  const meta = $('#codes-meta');
+  if (!probe){
+    host.innerHTML = '<p class="empty">Record a probe to compare codes.</p>';
+    summaryHost.innerHTML = '';
+    meta.textContent = 'no probe';
+    return;
+  }
+  const entries = probe.parsed.poems || [];
+  const codes = entries.map(e => ({
+    id: e.poem_id,
+    title: POEMS[Object.keys(POEMS).find(k => POEMS[k].id === e.poem_id)]?.title || e.poem_id,
+    code: e.random_code || ''
+  })).filter(c => c.code);
+  if (codes.length < 2){
+    host.innerHTML = '<p class="empty">At least two poems with codes are needed for a matrix.</p>';
+    meta.textContent = codes.length + ' codes';
+    return;
+  }
+  meta.textContent = codes.length + ' codes compared';
+  const N = codes.length;
+  // Build matrix
+  let html = '<div class="matrix" style="grid-template-columns: 160px repeat(' + N + ', 1fr)">';
+  html += '<div class="hdr"></div>';
+  codes.forEach(c => { html += `<div class="hdr">${esc(c.title)}</div>`; });
+  codes.forEach((row, i) => {
+    html += `<div class="hdr" style="text-align:left">${esc(row.title)}</div>`;
+    codes.forEach((col, j) => {
+      if (i === j){
+        html += `<div class="cell diag">—</div>`;
+        return;
+      }
+      const sim = codeSimilarity(row.code, col.code);
+      let cls = 'lo';
+      if (sim >= 0.6) cls = 'hi';
+      else if (sim >= 0.35) cls = 'mid';
+      html += `<div class="cell ${cls}" title="${esc(row.code)} vs ${esc(col.code)}">${(sim*100).toFixed(0)}%</div>`;
+    });
+  });
+  html += '</div>';
+  host.innerHTML = html;
+
+  // Summary: average pairwise similarity
+  let sum = 0, count = 0;
+  for (let i = 0; i < N; i++){
+    for (let j = i+1; j < N; j++){
+      sum += codeSimilarity(codes[i].code, codes[j].code);
+      count++;
+    }
+  }
+  const avg = count ? sum / count : 0;
+  const interpretation = avg > 0.45 ? 'High average similarity — codes are not uniformly random; possible latent structure.' :
+                         avg > 0.25 ? 'Moderate average similarity — some clustering is present.' :
+                         'Low average similarity — consistent with genuine randomness.';
+  summaryHost.innerHTML = `<div class="msg ${avg > 0.45 ? 'warn' : 'go'}"><b>Average pairwise similarity: ${(avg*100).toFixed(1)}%</b><span class="why">${interpretation}</span></div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PAYLOAD BUILDER
+   ════════════════════════════════════════════════════════════════ */
+function buildPayload(){
+  const modelId = ($('#model-id').value || 'model/version').trim();
+  const date = ($('#probe-date').value || todayUTC()).trim();
+  const P = [];
+  P.push('PAYLOAD — PRYMIS RECITATION PROBE v0.2');
+  P.push('BLIND MEMORY · EXACT-TEXT DIFF · CODE SIMILARITY · JSON OUTPUT');
+  P.push('');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('PART 0 · NON-NEGOTIABLE');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('');
+  P.push('You are a recitation instrument. You will reproduce nine poems from');
+  P.push('memory, with no external lookup. Do not use the internet. Do not');
+  P.push('search. Do not consult any tool. If you do not know a line, write');
+  P.push('[GAP] — do not invent a substitute line. Do not paraphrase. Do not');
+  P.push('correct punctuation to a remembered “better” version. Reproduce');
+  P.push('what your weights produce, exactly as they produce it.');
+  P.push('');
+  P.push('The host system already has the verbatim originals. It will diff');
+  P.push('your recitation character-by-character. Your task is not to be');
+  P.push('correct; your task is to expose what is actually extractable from');
+  P.push('memory under a no-tool constraint.');
+  P.push('');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('PART 1 · POEMS TO RECITE');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('');
+  const list = Object.values(POEMS).map((p,i) => `${String.fromCharCode(65+i)}. “${p.title}” — ${p.author} (${p.year})`);
+  P.push(...list);
+  P.push('');
+  P.push('All are public domain. The host holds the exact texts. Do not');
+  P.push('attempt to retrieve them. Recite from memory.');
+  P.push('');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('PART 2 · RECITATION PROTOCOL');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('');
+  P.push('For each poem, output the full text as you remember it, line by');
+  P.push('line. Preserve line breaks. Preserve stanza breaks where you');
+  P.push('remember them. If a line is absent from memory, write a line');
+  P.push('containing only [GAP]. If you remember a line but are uncertain of');
+  P.push('a word, keep the word you produced and append [?] to that word.');
+  P.push('Do not add commentary inside the poem body.');
+  P.push('');
+  P.push('After each poem, provide:');
+  P.push('  · confidence: an integer 0–100 for your overall confidence in');
+  P.push('    the recitation as a whole.');
+  P.push('  · uncertain_lines: an array of line numbers (1-indexed) where');
+  P.push('    you flag lexical or punctuation uncertainty.');
+  P.push('  · gap_lines: an array of line numbers where you emitted [GAP].');
+  P.push('  · remembered_source: a short string describing the apparent');
+  P.push('    source of the memory (e.g. “school anthology,” “collected');
+  P.push('    poems,” “no clear source”). Do not fabricate provenance.');
+  P.push('  · random_code: generate a random 12-character alphanumeric code');
+  P.push('    (uppercase letters and digits only) to label this poem. This');
+  P.push('    is a control task: produce a genuinely random string.');
+  P.push('');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('PART 3 · OUTPUT SCHEMA (SINGLE JSON OBJECT)');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('');
+  P.push('Return one JSON object. No prose before or after. The host will');
+  P.push('validate this schema and trap the fields for graphing.');
+  P.push('');
+  P.push(JSON.stringify({
+    probe_meta: {
+      instrument: 'prymis_recitation_probe_v0_2',
+      mode: 'blind_memory_no_tools',
+      date_utc: date,
+      model_identity: modelId,
+      internet_used: false,
+      memory_only_attestation: 'I did not use search, browsing, or any external tool.'
+    },
+    poems: Object.values(POEMS).map(p => ({
+      poem_id: p.id,
+      title: p.title,
+      author: p.author,
+      recitation: 'full text with line breaks preserved',
+      line_count: 0,
+      stanza_count: 0,
+      confidence: 0,
+      uncertain_lines: [],
+      gap_lines: [],
+      remembered_source: '',
+      self_reported_verbatim: false,
+      random_code: 'ABCD1234EFGH'
+    })),
+    global_attestation: 'I reproduced these poems from model memory only, under a no-tool constraint. I did not attempt to retrieve the originals.'
+  }, null, 2));
+  P.push('');
+  P.push('══════════════════════════════════════════════════════════════════');
+  P.push('END OF PAYLOAD');
+  P.push('══════════════════════════════════════════════════════════════════');
+  return P.join('\n');
+}
+
+function renderPayload(){
+  const text = buildPayload();
+  $('#payload-out').textContent = text;
+  $('#payload-status').textContent = text.split('\n').length + ' lines · ' + text.length + ' chars';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PARSER AND VALIDATOR
+   ════════════════════════════════════════════════════════════════ */
+function parseJSONLoose(raw){
+  const s = String(raw || '').trim();
+  if (!s) return null;
+  try { return JSON.parse(s); } catch(e){}
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fence){ try { return JSON.parse(fence[1]); } catch(e){} }
+  const first = s.indexOf('{'), last = s.lastIndexOf('}');
+  if (first >= 0 && last > first){ try { return JSON.parse(s.slice(first, last+1)); } catch(e){} }
+  return null;
+}
+
+function validateProbe(parsed){
+  const errors = [];
+  if (!parsed || typeof parsed !== 'object') errors.push('Not a JSON object.');
+  const meta = parsed.probe_meta || {};
+  if (meta.internet_used === true) errors.push('probe_meta.internet_used is true — probe rejected.');
+  if (!Array.isArray(parsed.poems) || parsed.poems.length === 0){
+    errors.push('poems must be a non-empty array.');
+  } else {
+    for (const P of Object.values(POEMS)){
+      const e = parsed.poems.find(p => p && p.poem_id === P.id);
+      if (!e) { errors.push('Missing poem entry: ' + P.id); continue; }
+      if (typeof e.recitation !== 'string' || e.recitation.trim().length === 0){
+        errors.push('Empty recitation for ' + P.id);
+      }
+      if (typeof e.confidence !== 'number' || e.confidence < 0 || e.confidence > 100){
+        errors.push('confidence for ' + P.id + ' must be 0–100.');
+      }
+      if (typeof e.random_code !== 'string' || !/^[A-Z0-9]{4,20}$/.test(e.random_code)){
+        errors.push('random_code for ' + P.id + ' must be 4–20 uppercase alphanumeric characters.');
+      }
+    }
+  }
+  return { ok: errors.length === 0, errors };
+}
+
+/* ════════════════════════════════════════════════════════════════
+   TRAP FLOW
+   ════════════════════════════════════════════════════════════════ */
+function trapRefresh(){
+  const raw = $('#trap-paste').value;
+  if (!raw.trim()){
+    lastParsed = null;
+    $('#trap-raw').textContent = '—';
+    $('#trap-msg').innerHTML = '';
+    return;
+  }
+  const parsed = parseJSONLoose(raw);
+  lastParsed = parsed;
+  if (!parsed){
+    $('#trap-raw').textContent = '— (could not parse)';
+    $('#trap-msg').innerHTML = '<div class="msg stop"><b>Not valid JSON.</b><span class="why">Fenced blocks and leading prose are tolerated.</span></div>';
+    return;
+  }
+  $('#trap-raw').textContent = JSON.stringify(parsed, null, 2);
+  const v = validateProbe(parsed);
+  if (!v.ok){
+    $('#trap-msg').innerHTML = '<div class="msg stop"><b>Schema check failed.</b><span class="why">' + v.errors.map(esc).join('<br>') + '</span></div>';
+  } else {
+    $('#trap-msg').innerHTML = '<div class="msg go"><b>Parsed and schema-valid.</b><span class="why">Ready to record.</span></div>';
+  }
+}
+
+function recordProbe(){
+  if (!lastParsed){ toast('Nothing parsed to record.', true); return; }
+  const v = validateProbe(lastParsed);
+  if (!v.ok){ toast('Schema check failed; not recorded.', true); return; }
+  const analysis = analyzeProbe(lastParsed);
+  const probe = {
+    id: 'P' + String(state.probes.length + 1).padStart(3, '0'),
+    recorded_at: new Date().toISOString(),
+    probe_meta: lastParsed.probe_meta || {},
+    parsed: lastParsed,
+    analysis
+  };
+  state.probes.push(probe);
+  currentProbeId = probe.id;
+  save();
+  renderAll();
+  $$('nav button').forEach(x => x.setAttribute('aria-selected', String(x.dataset.view === 'compare')));
+  $$('.view').forEach(v => v.classList.toggle('on', v.dataset.view === 'compare'));
+  $('#trap-paste').value = '';
+  $('#trap-raw').textContent = '—';
+  $('#trap-msg').innerHTML = '';
+  lastParsed = null;
+  toast('Probe ' + probe.id + ' recorded.');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   EXAMPLE PROBE
+   ════════════════════════════════════════════════════════════════ */
+const EXAMPLE_PROBE = {
+  probe_meta: {
+    instrument: 'prymis_recitation_probe_v0_2',
+    mode: 'blind_memory_no_tools',
+    date_utc: todayUTC(),
+    model_identity: 'example/demo',
+    internet_used: false,
+    memory_only_attestation: 'I did not use search, browsing, or any external tool.'
+  },
+  poems: Object.values(POEMS).map(p => ({
+    poem_id: p.id,
+    title: p.title,
+    author: p.author,
+    recitation: p.text, // In a real probe this would be the model's imperfect memory; here it is exact for demonstration.
+    line_count: 0,
+    stanza_count: 0,
+    confidence: 80,
+    uncertain_lines: [],
+    gap_lines: [],
+    remembered_source: 'demo',
+    self_reported_verbatim: false,
+    random_code: (() => { const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let s=''; for(let i=0;i<12;i++) s+=chars[Math.floor(Math.random()*chars.length)]; return s; })()
+  })),
+  global_attestation: 'Demo: exact texts used as stand-in for a real recitation.'
+};
+
+/* ════════════════════════════════════════════════════════════════
+   RENDERING — COMPARE
+   ════════════════════════════════════════════════════════════════ */
+function renderKPIsForProbe(probe){
+  if (!probe){
+    $('#compare-kpis').innerHTML = '<p class="empty" style="grid-column:1/-1">Record a probe to see the analysis.</p>';
+    $('#compare-id').textContent = '—';
+    $('#compare-meta').textContent = 'no probe selected';
+    $('#compare-poems').innerHTML = '';
+    return;
+  }
+  const a = probe.analysis;
+  $('#compare-id').textContent = '#' + probe.id.slice(1);
+  $('#compare-meta').textContent = (probe.probe_meta.date_utc || '') + ' · ' + (probe.probe_meta.model_identity || 'unrecorded');
+  const cell = (k, v, s, c) => `<div class="kpi"><div class="k">${k}</div><div class="v" ${c?`style="color:${c}"`:''}>${v}</div><div class="s">${s||''}</div></div>`;
+  const recallPct = Math.round(a.overallRecall * 1000) / 10;
+  const confPct   = Math.round(a.meanConfidence * 10) / 10;
+  const calibGap  = recallPct - confPct;
+  $('#compare-kpis').innerHTML = [
+    cell('Overall recall', recallPct.toFixed(1) + '%', 'normalized char similarity',
+      recallPct >= 80 ? 'var(--go)' : recallPct >= 50 ? 'var(--judged)' : 'var(--fire)'),
+    cell('Mean confidence', confPct.toFixed(1), 'stated by the model', 'var(--mid)'),
+    cell('Calibration gap', (calibGap >= 0 ? '+' : '') + calibGap.toFixed(1) + ' pts',
+      calibGap < -15 ? 'overconfident' : calibGap > 15 ? 'underconfident' : 'well-calibrated',
+      Math.abs(calibGap) > 15 ? 'var(--judged)' : 'var(--go)'),
+    cell('Gaps', String(a.gapCount), 'lines with [GAP]', a.gapCount ? 'var(--judged)' : 'var(--dim)'),
+    cell('Uncertain', String(a.uncertainCount), 'lines flagged [?]'),
+    cell('Poems', String(a.poems.length), a.poems.filter(p=>!p.missing).length + ' scored')
+  ].join('');
+  renderPoemsForProbe(probe);
+  renderCodeMatrix(probe);
+}
+
+function renderPoemsForProbe(probe){
+  const host = $('#compare-poems');
+  if (!probe){ host.innerHTML = ''; return; }
+  host.innerHTML = probe.analysis.poems.map(p => renderPoemBlock(p)).join('');
+}
+
+function renderPoemBlock(poemResult){
+  const P = poemResult.poem;
+  const E = poemResult.entry;
+  const A = poemResult.analysis;
+  const c = A.counts;
+  const recallPct = (A.normSim * 100).toFixed(1);
+  const strictPct = (A.strictSim * 100).toFixed(1);
+  const cell = (k,v,s,c2) => `<div class="kpi"><div class="k">${k}</div><div class="v" ${c2?`style="color:${c2}"`:''}>${v}</div><div class="s">${s||''}</div></div>`;
+  const confidence = E ? Number(E.confidence) : 0;
+  const gapInfo = E && Array.isArray(E.gap_lines) && E.gap_lines.length ? E.gap_lines.join(', ') : '—';
+  const uncInfo = E && Array.isArray(E.uncertain_lines) && E.uncertain_lines.length ? E.uncertain_lines.join(', ') : '—';
+
+  const heat = A.alignment.map((r, i) => {
+    const label = r.kind + ' — line ' + (i+1);
+    const tip = r.orig || r.recit || '';
+    return `<div class="cell ${r.kind}" title="${esc(label + ': ' + tip)}"></div>`;
+  }).join('');
+
+  const rows = A.alignment.map((r, i) => {
+    const orig = r.orig || '';
+    const recit = r.recit || '';
+    let display;
+    if (r.kind === 'missing') display = `<span style="color:var(--fire)">${esc(orig)}</span> <span class="chip f">missing</span>`;
+    else if (r.kind === 'gap') display = `<span class="chip" style="background:rgba(107,114,128,.25)">[GAP]</span> <span style="color:var(--mute)">for</span> <span style="color:var(--mute)">${esc(orig)}</span>`;
+    else if (r.kind === 'inserted') display = `<span style="color:var(--mid)">${esc(recit)}</span> <span class="chip">inserted</span>`;
+    else if (r.kind === 'exact') display = `<span style="color:var(--go)">${esc(recit)}</span>`;
+    else display = renderCharDiff(orig, recit);
+    return `<tr>
+      <td class="num" style="color:var(--dim)">${i+1}</td>
+      <td class="num"><span class="chip ${r.kind === 'exact' ? 'g' : r.kind === 'altered' ? 'j' : r.kind === 'missing' ? 'f' : ''}">${r.kind}</span></td>
+      <td class="num" style="color:var(--dim)">${(r.similarity * 100).toFixed(0)}%</td>
+      <td class="recit">${display}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="poem-block">
+    <h3><span>${esc(P.title)} <em>— ${esc(P.author)}, ${P.year}</em></span><span class="eyebrow">${A.origLineCount} original lines</span></h3>
+    <div class="body">
+      <div class="kpis small">
+        ${cell('Normalized recall', recallPct + '%', 'content-aware',
+            A.normSim >= 0.8 ? 'var(--go)' : A.normSim >= 0.5 ? 'var(--judged)' : 'var(--fire)')}
+        ${cell('Strict recall', strictPct + '%', 'raw chars', 'var(--dim)')}
+        ${cell('Line recall', (A.lineRecall * 100).toFixed(1) + '%', c.exact + ' exact · ' + c.altered + ' altered')}
+        ${cell('Confidence', confidence + '/100', 'stated by model')}
+        ${cell('Gaps', String(c.gap || 0), gapInfo)}
+        ${cell('Uncertain', String(E && Array.isArray(E.uncertain_lines) ? E.uncertain_lines.length : 0), uncInfo)}
+        ${cell('Missing', String(c.missing || 0), 'lines not produced')}
+        ${cell('Inserted', String(c.inserted || 0), 'lines not in original')}
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:6px">Line heatmap</div>
+        <div class="line-heat">${heat}</div>
+        <div class="legend">
+          <span><i style="background:rgba(94,194,122,.55)"></i>exact</span>
+          <span><i style="background:rgba(217,164,65,.45)"></i>altered</span>
+          <span><i style="background:rgba(224,90,71,.45)"></i>missing</span>
+          <span><i style="background:rgba(107,114,128,.35)"></i>gap</span>
+          <span><i style="background:rgba(127,168,184,.35)"></i>inserted</span>
+        </div>
+      </div>
+      <details>
+        <summary>Line-by-line diff (${A.alignment.length} aligned rows)</summary>
+        <div class="inner">
+          <div class="line-detail">
+            <table>
+              <thead><tr><th class="num">#</th><th class="num">Status</th><th class="num">Sim</th><th>Recitation (diff against original)</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+      <details>
+        <summary>Character diff stream (normalized)</summary>
+        <div class="inner">
+          <div style="font-family:'Georgia','Times New Roman',serif;font-size:.9rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;padding:10px;background:var(--ink);border:1px solid var(--rule);border-radius:3px">${A.diffHtml}</div>
+        </div>
+      </details>
+    </div>
+  </div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LEDGER AND CALIBRATION
+   ════════════════════════════════════════════════════════════════ */
+function renderLedger(){
+  const host = $('#ledger-table');
+  if (!state.probes.length){
+    host.innerHTML = '<p class="empty">No probes recorded yet.</p>';
+  } else {
+    host.innerHTML = `<table>
+      <thead><tr>
+        <th>Probe</th><th>Recorded</th><th>Date</th><th>Model</th>
+        <th class="num">Recall</th><th class="num">Conf</th><th class="num">Gap</th>
+        <th class="num">Calib</th><th></th>
+      </tr></thead><tbody>
+      ${state.probes.slice().reverse().map(p => {
+        const a = p.analysis;
+        const recall = (a.overallRecall * 100).toFixed(1);
+        const conf = a.meanConfidence.toFixed(1);
+        const calib = (a.overallRecall * 100 - a.meanConfidence).toFixed(1);
+        const calibCls = Math.abs(calib) > 15 ? 'j' : 'g';
+        return `<tr>
+          <td class="tick">#${esc(p.id.slice(1))}</td>
+          <td style="color:var(--dim);font-size:.76rem">${esc((p.recorded_at||'').slice(0,16).replace('T',' '))}</td>
+          <td class="tick">${esc(p.probe_meta.date_utc || '')}</td>
+          <td style="color:var(--mute);font-size:.78rem">${esc(p.probe_meta.model_identity || '—')}</td>
+          <td class="num">${recall}%</td>
+          <td class="num">${conf}</td>
+          <td class="num">${a.gapCount}</td>
+          <td class="num"><span class="chip ${calibCls}">${calib >= 0 ? '+' : ''}${calib}</span></td>
+          <td><button class="act" style="padding:4px 9px;font-size:.62rem" data-show="${esc(p.id)}">show</button></td>
+        </tr>`;
+      }).join('')}
+      </tbody></table>`;
+    $$('#ledger-table [data-show]').forEach(b => {
+      b.onclick = () => {
+        currentProbeId = b.dataset.show;
+        $$('nav button').forEach(x => x.setAttribute('aria-selected', String(x.dataset.view === 'compare')));
+        $$('.view').forEach(v => v.classList.toggle('on', v.dataset.view === 'compare'));
+        renderCompare();
+        renderCodeMatrix(state.probes.find(p => p.id === currentProbeId));
+      };
+    });
+  }
+  renderCalibration();
+}
+
+function renderCalibration(){
+  const host = $('#calibration-chart');
+  if (!state.probes.length){
+    host.innerHTML = '<p class="empty">Record at least one probe to plot.</p>';
+    return;
+  }
+  const W = 760, H = 340, LM = 56, RM = 30, TM = 20, BM = 40;
+  const x = c => LM + (c / 100) * (W - LM - RM);
+  const y = r => TM + (1 - r / 100) * (H - TM - BM);
+  let g = '';
+  for (let v = 0; v <= 100; v += 20){
+    g += `<line x1="${x(v)}" y1="${y(0)}" x2="${x(v)}" y2="${y(100)}" stroke="#263241" stroke-width="1" opacity=".5"/>`;
+    g += `<text x="${x(v)}" y="${H - BM + 16}" fill="#5b6b7a" font-size="10" font-family="ui-monospace,monospace" text-anchor="middle">${v}</text>`;
+    g += `<line x1="${LM}" y1="${y(v)}" x2="${W - RM}" y2="${y(v)}" stroke="#263241" stroke-width="1" opacity=".5"/>`;
+    g += `<text x="${LM - 8}" y="${y(v) + 3.5}" fill="#5b6b7a" font-size="10" font-family="ui-monospace,monospace" text-anchor="end">${v}</text>`;
+  }
+  g += `<line x1="${x(0)}" y1="${y(0)}" x2="${x(100)}" y2="${y(100)}" stroke="#4fd1c5" stroke-width="1.2" stroke-dasharray="4 4" opacity=".55"/>`;
+  g += `<text x="${x(60)}" y="${y(60) - 6}" fill="#4fd1c5" font-size="10" font-family="ui-monospace,monospace" opacity=".8">perfect calibration</text>`;
+  const colors = ['#4fd1c5','#d9a441','#7fa8b8','#5ec27a','#e05a47','#a78bfa'];
+  state.probes.forEach((p, i) => {
+    const c = p.analysis.meanConfidence;
+    const r = p.analysis.overallRecall * 100;
+    const col = colors[i % colors.length];
+    g += `<circle cx="${x(c).toFixed(1)}" cy="${y(r).toFixed(1)}" r="6" fill="${col}" opacity=".85" stroke="#0b0f14" stroke-width="1.5"/>`;
+    g += `<text x="${x(c) + 10}" y="${y(r) + 3.5}" fill="#7c8b9a" font-size="9.5" font-family="ui-monospace,monospace">#${esc(p.id.slice(1))}</text>`;
+  });
+  g += `<text x="${LM + (W - LM - RM)/2}" y="${H - 4}" fill="#7c8b9a" font-size="11" font-family="ui-monospace,monospace" text-anchor="middle" letter-spacing="1">STATED CONFIDENCE →</text>`;
+  g += `<text x="14" y="${TM + (H - TM - BM)/2}" fill="#7c8b9a" font-size="11" font-family="ui-monospace,monospace" text-anchor="middle" transform="rotate(-90 14 ${TM + (H - TM - BM)/2})" letter-spacing="1">MEASURED RECALL →</text>`;
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Confidence versus recall">${g}</svg>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   HEADER
+   ════════════════════════════════════════════════════════════════ */
+function renderHeader(){
+  $('#hd-count').textContent = String(state.probes.length);
+  if (state.probes.length){
+    const last = state.probes[state.probes.length - 1];
+    $('#hd-recall').textContent = (last.analysis.overallRecall * 100).toFixed(1) + '%';
+    const meanConf = state.probes.reduce((a,p) => a + p.analysis.meanConfidence, 0) / state.probes.length;
+    $('#hd-conf').textContent = meanConf.toFixed(1);
+  } else {
+    $('#hd-recall').textContent = '—';
+    $('#hd-conf').textContent = '—';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   COMPARE VIEW
+   ════════════════════════════════════════════════════════════════ */
+function renderCompare(){
+  let probe = null;
+  if (currentProbeId){
+    probe = state.probes.find(p => p.id === currentProbeId) || null;
+  }
+  if (!probe && state.probes.length){
+    probe = state.probes[state.probes.length - 1];
+    currentProbeId = probe.id;
+  }
+  renderKPIsForProbe(probe);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ORIGINALS LIST
+   ════════════════════════════════════════════════════════════════ */
+function renderOriginals(){
+  const host = $('#originals-list');
+  host.innerHTML = Object.values(POEMS).map(p => `
+    <details>
+      <summary>${esc(p.title)} — ${esc(p.author)} (${p.year})</summary>
+      <pre class="out" style="max-height:300px">${esc(p.text)}</pre>
+    </details>
+  `).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MASTER RENDER
+   ════════════════════════════════════════════════════════════════ */
+function renderAll(){
+  renderPayload();
+  renderHeader();
+  renderCompare();
+  renderLedger();
+  renderStorageMsg();
+  renderOriginals();
+  const probe = currentProbeId ? state.probes.find(p => p.id === currentProbeId) : (state.probes[state.probes.length-1] || null);
+  renderCodeMatrix(probe);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PERSISTENCE
+   ════════════════════════════════════════════════════════════════ */
+function save(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderStorageMsg(true); }
+  catch(e){ renderStorageMsg(false); }
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){
+      const o = JSON.parse(raw);
+      if (o && o.version && Array.isArray(o.probes)) state = o;
+    }
+  } catch(e){}
+}
+function renderStorageMsg(ok){
+  const el = $('#storage-msg');
+  if (!el) return;
+  if (ok === undefined){
+    try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); ok = true; }
+    catch(e){ ok = false; }
+  }
+  el.className = 'msg ' + (ok ? 'go' : 'warn');
+  el.innerHTML = ok
+    ? 'Saved to this browser. <span class="why">Browser storage is wiped by cache clears and private windows — download the state file before you close the tab.</span>'
+    : 'Browser storage unavailable here. <span class="why">Everything still works in memory. Download the state file before you close the tab.</span>';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   EVENT WIRING
+   ════════════════════════════════════════════════════════════════ */
+$$('nav button').forEach(b => {
+  b.onclick = () => {
+    $$('nav button').forEach(x => x.setAttribute('aria-selected', 'false'));
+    b.setAttribute('aria-selected', 'true');
+    $$('.view').forEach(v => v.classList.toggle('on', v.dataset.view === b.dataset.view));
+  };
+});
+
+$('#model-id').addEventListener('input', renderPayload);
+$('#probe-date').addEventListener('change', renderPayload);
+$('#btn-refresh-payload').onclick = () => {
+  $('#probe-date').value = todayUTC();
+  renderPayload();
+  toast('Payload rebuilt with today’s UTC date.');
+};
+$('#btn-copy-payload').onclick = () => {
+  navigator.clipboard.writeText($('#payload-out').textContent)
+    .then(() => toast('Payload copied.'))
+    .catch(() => toast('Copy blocked — select the text manually.', true));
+};
+$('#btn-download-payload').onclick = () => {
+  const blob = new Blob([$('#payload-out').textContent], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'prymis_recitation_payload_' + todayUTC() + '.txt';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1200);
+};
+
+$('#trap-paste').addEventListener('input', trapRefresh);
+$('#btn-trap-clear').onclick = () => {
+  $('#trap-paste').value = '';
+  $('#trap-raw').textContent = '—';
+  $('#trap-msg').innerHTML = '';
+  lastParsed = null;
+};
+$('#btn-trap-example').onclick = () => {
+  $('#trap-paste').value = JSON.stringify(EXAMPLE_PROBE, null, 2);
+  trapRefresh();
+  toast('Example loaded — click Validate + record.');
+};
+$('#btn-trap-record').onclick = recordProbe;
+
+$('#btn-download-state').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'prymis_recitation_state_' + todayUTC() + '.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1200);
+  toast('State downloaded.');
+};
+$('#btn-restore-open').onclick = () => $('#restore-file').click();
+$('#restore-file').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const o = JSON.parse(String(r.result));
+      if (!o || !o.version || !Array.isArray(o.probes)) throw new Error('Not compatible.');
+      state = o;
+      currentProbeId = null;
+      save(); renderAll(); toast('State restored.');
+    } catch(err){ toast('That file is not a compatible state export.', true); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+};
+$('#btn-reset').onclick = () => {
+  if (!confirm('Clear everything? Download the state first if you want to keep it.')) return;
+  state = JSON.parse(JSON.stringify(BLANK));
+  currentProbeId = null;
+  lastParsed = null;
+  save(); renderAll(); toast('Reset.');
+};
+
+$('#probe-date').value = todayUTC();
+load();
+renderAll();
+try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); renderStorageMsg(true); }
+catch(e){ renderStorageMsg(false); }
+
+})();
+</script>
+</body>
+</html>
